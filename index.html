@@ -1,47 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Circuit Warfare</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Circuit Warfare</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- MAIN MENU -->
+  <section id="main-menu" class="screen">
+    <h1>Circuit Warfare</h1>
+    <button id="startBtn">Start Game</button>
+    <button id="continueBtn">Continue</button>
+    <button id="howToPlayBtn">How to Play</button>
+  </section>
 
-    <!-- MAIN MENU (we will style this later) -->
-    <section id="main-menu" class="screen">
-        <h1>Circuit Warfare</h1>
-        <button id="startBtn">Start Game</button>
-        <button id="continueBtn">Continue</button>
-        <button id="howToPlayBtn">How to Play</button>
-    </section>
+  <!-- STORY -->
+  <section id="story-screen" class="screen hidden">
+    <div id="story-panel">
+      <div id="story-text">[Story text will appear here]</div>
+    </div>
 
-    <!-- STORY SCREEN -->
-    <section id="story-screen" class="screen hidden">
-        <div id="story-text"></div>
-        <div id="choice-buttons"></div>
-        <button id="continueStoryBtn">Continue</button>
-    </section>
+    <!-- Choices appear here dynamically -->
+    <div id="choice-buttons" class="choices"></div>
 
-    <!-- COMBAT SCREEN -->
-    <section id="combat-screen" class="screen hidden">
-        <h2>Combat Screen</h2>
-        <div id="enemy-info"></div>
-        <div id="combat-log"></div>
-        <button id="attackBtn">Attack</button>
-        <button id="defendBtn">Defend</button>
-        <button id="specialBtn">Special</button>
-        <button id="itemBtn">Item</button>
-    </section>
+    <!-- Continue is visible only for linear scenes -->
+    <button id="continueStoryBtn" class="hidden">Continue</button>
+  </section>
 
-    <!-- OUTCOME SCREEN -->
-    <section id="outcome-screen" class="screen hidden">
-        <h2 id="outcome-title"></h2>
-        <button id="continueAfterBattle">Continue</button>
-        <button id="retryBtn">Retry</button>
-        <button id="menuBtn">Main Menu</button>
-    </section>
+  <!-- COMBAT (placeholder for later sprints) -->
+  <section id="combat-screen" class="screen hidden">
+    <h2>Combat Screen</h2>
+    <div id="enemy-info"></div>
+    <div id="combat-log"></div>
+    <button id="attackBtn">Attack</button>
+    <button id="defendBtn">Defend</button>
+    <button id="specialBtn">Special</button>
+    <button id="itemBtn">Item</button>
+  </section>
 
-    <script src="script.js"></script>
+  <!-- OUTCOME (placeholder adapted in later sprints) -->
+  <section id="outcome-screen" class="screen hidden">
+    <h2 id="outcome-title">[Result]</h2>
+    <button id="continueAfterBattle">Continue</button>
+    <button id="retryBtn">Retry</button>
+    <button id="menuBtn">Main Menu</button>
+  </section>
+
+  <script src="script.js"></script>
 </body>
 </html>
