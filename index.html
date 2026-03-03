@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Circuit Warfare</title>
+
   <link rel="stylesheet" href="style.css" />
+
+  <!-- Load JS with defer so the DOM is ready when JS runs -->
+  <script src="script.js" defer></script>
 </head>
 <body>
   <!-- MAIN MENU -->
@@ -39,14 +43,12 @@
     <button id="itemBtn">Item</button>
   </section>
 
-  <!-- OUTCOME (placeholder adapted in later stages) -->
+  <!-- OUTCOME (placeholder) -->
   <section id="outcome-screen" class="screen hidden">
     <h2 id="outcome-title">[Result]</h2>
     <button id="continueAfterBattle">Continue</button>
     <button id="retryBtn">Retry</button>
     <button id="menuBtn">Main Menu</button>
   </section>
-
-  <script src="script.js"></script>
 </body>
 </html>
