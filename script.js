@@ -143,6 +143,8 @@ let enemy = {
   def: 5
 };
 
+const TECH_GAIN = 10;
+
 // Start combat: switch screen, reset values, update HUD
 function startCombat() {
   goToScreen("combat-screen");
@@ -178,15 +180,146 @@ function logMessage(msg) {
   log.scrollTop = log.scrollHeight;
 }
 
+// Handle player attack/defend/special/item action
+function playerAttack() {
+  const dmg = Math.max(1, player.atk - enemy.def);
+  enemy.hp -= dmg;
+  logMessage(`You attack the ${enemy.name} for ${dmg} damage.`);
+  
+  updateCombatHUD();
+  
+  if (enemy.hp <= 0) {
+    endCombat(true);
+    return;
+  }
+
+  enemyTurn();
+}
+
+let playerIsDefending = false;
+
+function playerDefend() {
+  playerIsDefending = true;
+  logMessage("You brace for impact. (Defend)");
+  enemyTurn();
+}
+
+function playerSpecial() {
+  if (player.tech < player.maxTech) {
+    logMessage("Not enough Tech to use Special Move!");
+    return;
+  }
+
+  const dmg = Math.max(1, player.atk * 2 - enemy.def);
+  enemy.hp -= dmg;
+  logMessage(`You unleash a SPECIAL ATTACK for ${dmg} damage!`);
+  player.tech = 0;
+
+  updateCombatHUD();
+
+  if (enemy.hp <= 0) {
+    endCombat(true);
+    return;
+  }
+
+  enemyTurn();
+}
+
+function playerUseItem() {
+  if (player.items <= 0) {
+    logMessage("You have no items left!");
+    return;
+  }
+
+  const healAmount = 20;
+  player.hp = Math.min(player.maxHp, player.hp + healAmount);
+  player.items--;
+
+  logMessage(`You use a health pack and heal ${healAmount} HP.`);
+  updateCombatHUD();
+
+  enemyTurn();
+}
+
+function enemyTurn() {
+  // Simple AI: 80% attack, 20% defend
+  const roll = Math.random();
+
+  if (roll < 0.2) {
+    logMessage(`${enemy.name} braces for defense.`);
+    // Enemy defense reduces your next turn's damage a little (optional)
+    enemy.def += 2;
+    setTimeout(() => { enemy.def -= 2; }, 1000);
+    return;
+  }
+
+  // Enemy ATTACK
+  let dmg = Math.max(1, enemy.atk - player.def);
+
+  if (playerIsDefending) {
+    dmg = Math.floor(dmg / 2);
+    playerIsDefending = false;
+    logMessage("Your defend reduces the incoming damage!");
+  }
+
+  player.hp -= dmg;
+  logMessage(`${enemy.name} attacks you for ${dmg} damage.`);
+
+  updateCombatHUD();
+
+  // Tech gain for player each turn
+  player.tech = Math.min(player.maxTech, player.tech + TECH_GAIN);
+
+  if (player.hp <= 0) {
+    endCombat(false);
+  }
+}
+
+function endCombat(playerWon) {
+  if (playerWon) {
+    logMessage("You defeated the enemy!");
+    $("#outcome-title").textContent = "VICTORY!";
+  } else {
+    logMessage("You have been defeated...");
+    $("#outcome-title").textContent = "GAME OVER";
+  }
+
+  // Move to outcome screen after short delay
+  setTimeout(() => {
+    goToScreen("outcome-screen");
+  }, 1200);
+
+  // Continue button (only on victory)
+  $("#continueAfterBattle").onclick = () => {
+    if (playerWon) {
+      gameState.currentSceneId = 6; // Goes to scene 6 after victory
+      goToScreen("story-screen");
+      renderScene();
+    } else {
+      goToScreen("main-menu");
+    }
+  };
+
+  $("#retryBtn").onclick = () => {
+    startCombat();
+  };
+
+  $("#menuBtn").onclick = () => {
+    goToScreen("main-menu");
+  };
+}
+
 // =======================================
 // BUTTON LISTENERS (MENU)
 // =======================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  
+  console.log("DOM ready, attaching listeners…");
+
+  // ===== MENU BUTTONS =====
   const startBtn = $("startBtn");
   const menuBtn = $("menuBtn");
-  const howBtn = $("howToPlayBtn");
+  const howBtn  = $("howToPlayBtn");
 
   startBtn.addEventListener("click", () => {
     console.log("Start clicked");
@@ -208,6 +341,25 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  console.log("Listeners attached.");
+  // ===== COMBAT ACTION BUTTONS =====
+  const attackBtn  = $("attackBtn");
+  const defendBtn  = $("defendBtn");
+  const specialBtn = $("specialBtn");
+  const itemBtn    = $("itemBtn");
+
+  if (attackBtn) {
+    attackBtn.addEventListener("click", playerAttack);
+  }
+  if (defendBtn) {
+    defendBtn.addEventListener("click", playerDefend);
+  }
+  if (specialBtn) {
+    specialBtn.addEventListener("click", playerSpecial);
+  }
+  if (itemBtn) {
+    itemBtn.addEventListener("click", playerUseItem);
+  }
+
+  console.log("All listeners attached successfully.");
 });
 ``
