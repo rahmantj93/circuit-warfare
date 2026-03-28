@@ -2,21 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Circuit Warfare</title>
-
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <script src="script.js" defer></script>
 </head>
-
 <body>
-
   <!-- MAIN MENU -->
   <section id="main-menu" class="screen">
     <h1>Circuit Warfare</h1>
-    <button id="startBtn">Start Game</button>
-    <button id="continueBtn">Continue</button>
-    <button id="howToPlayBtn">How to Play</button>
+    <button id="startBtn" type="button">Start Game</button>
+    <button id="continueBtn" type="button">Continue</button>
+    <button id="howToPlayBtn" type="button">How to Play</button>
   </section>
 
   <!-- STORY SCREEN -->
@@ -24,49 +21,65 @@
     <div id="story-panel">
       <div id="story-text">[Story text will appear here]</div>
     </div>
-
     <div id="choice-buttons" class="choices"></div>
-    <button id="continueStoryBtn" class="hidden">Continue</button>
+    <button id="continueStoryBtn" class="hidden" type="button">Continue</button>
   </section>
 
   <!-- COMBAT SCREEN -->
   <section id="combat-screen" class="screen hidden combat-normal">
     <h2>Combat Screen</h2>
-
-    <!-- Spark effect -->
     <div id="spark"></div>
 
     <div id="combat-container">
-
-      <!-- LEFT SIDE: HUD + Buttons -->
+      <!-- LEFT SIDE -->
       <div id="combat-left">
+        <!-- Portraits -->
+        <div id="portraits-row">
+          <img id="player-portrait" src="assets/player.jpg" alt="Player" />
+          <img id="enemy-portrait" src="assets/enemy.jpg" alt="Enemy" />
+        </div>
+
+        <!-- Enemy HP Bar -->
+        <div class="hpbar-wrapper">
+          <div id="enemy-hp-bar" class="hpbar"></div>
+        </div>
         <div id="enemy-info"></div>
+
+        <!-- Player HP Bar -->
+        <div class="hpbar-wrapper">
+          <div id="player-hp-bar" class="hpbar"></div>
+        </div>
         <div id="player-info"></div>
 
+        <!-- Combat Buttons -->
         <div id="combat-buttons">
-          <button id="attackBtn">Attack</button>
-          <button id="defendBtn">Defend</button>
-          <button id="specialBtn">Special</button>
-          <button id="itemBtn">Item</button>
+          <button id="attackBtn" type="button">Attack</button>
+          <button id="defendBtn" type="button">Defend</button>
+          <button id="specialBtn" type="button">Special</button>
+          <button id="itemBtn" type="button">Item</button>
         </div>
+
+        <!-- Sound effects -->
+        <audio id="sfx-attack" src="assets/attack.mp3" preload="auto"></audio>
+        <audio id="sfx-defend" src="assets/defend.mp3" preload="auto"></audio>
+        <audio id="sfx-special" src="assets/special.mp3" preload="auto"></audio>
+        <audio id="sfx-item" src="assets/item.mp3" preload="auto"></audio>
+        <audio id="sfx-hit" src="assets/hit.mp3" preload="auto"></audio>
       </div>
 
-      <!-- RIGHT SIDE: Scrollable Log -->
+      <!-- RIGHT SIDE: LOG -->
       <div id="combat-log-container">
         <div id="combat-log"></div>
       </div>
-
     </div>
-
-</section>
+  </section>
 
   <!-- OUTCOME SCREEN -->
   <section id="outcome-screen" class="screen hidden">
     <h2 id="outcome-title"></h2>
-    <button id="continueAfterBattle">Continue</button>
-    <button id="retryBtn">Retry</button>
-    <button id="menuBtn">Main Menu</button>
+    <button id="continueAfterBattle" type="button">Continue</button>
+    <button id="retryBtn" type="button">Retry</button>
+    <button id="menuBtn" type="button">Main Menu</button>
   </section>
-
 </body>
 </html>
