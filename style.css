@@ -1,72 +1,129 @@
-:root{
-  --accent:#00eaff;
-  --bg:#0a0a0a;
+:root {
+  --accent: #00eaff;
+  --bg: #0a0a0a;
 }
 
-*{ box-sizing:border-box; }
-
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--accent);
-  font-family:Arial, sans-serif;
-  text-align:center;
+* {
+  box-sizing: border-box;
 }
 
-.screen{
-  min-height:100vh;
-  padding:40px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:16px;
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--accent);
+  font-family: Arial, sans-serif;
+  text-align: center;
 }
 
-.hidden{ display:none; }
-
-button{
-  background:#111;
-  color:var(--accent);
-  border:2px solid var(--accent);
-  padding:10px 20px;
-  cursor:pointer;
-}
-button:hover{ filter:brightness(1.2); }
-button:active{ transform:scale(0.95); filter:brightness(1.4); }
-
-#story-panel{
-  max-width:700px;
-  background:rgba(0,0,0,0.5);
-  border:1px solid var(--accent);
-  padding:16px;
-  border-radius:8px;
-  text-align:left;
+.screen {
+  min-height: 100vh;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
 }
 
-/* COMBAT BACKGROUND */
-#combat-screen{
-  position:relative;
-  width:100%;
-  height:100%;
-  background:linear-gradient(140deg,#050a1a,#0a1f3c,#0a0a0a);
-  overflow:hidden;
+.hidden {
+  display: none;
 }
-#combat-screen::after{
-  content:"";
-  position:absolute;
-  inset:0;
+
+button {
+  background: #111;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  padding: 10px 20px;
+  cursor: pointer;
+}
+button:hover {
+  filter: brightness(1.2);
+}
+button:active {
+  transform: scale(0.95);
+  filter: brightness(1.4);
+}
+
+#story-panel {
+  max-width: 700px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--accent);
+  padding: 16px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* Combat screen visuals */
+#combat-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #050a1a, #0a1f3c, #0a0a0a);
+  overflow: hidden;
+}
+
+#combat-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
   background-image:
-    linear-gradient(transparent 95%, rgba(0,234,255,0.15)),
-    linear-gradient(90deg, transparent 95%, rgba(0,234,255,0.15));
-  background-size:40px 40px;
-  pointer-events:none;
-  z-index:1;
+    linear-gradient(transparent 95%, rgba(0, 234, 255, 0.15)),
+    linear-gradient(90deg, transparent 95%, rgba(0, 234, 255, 0.15));
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 1;
 }
 
-/* ===============================
-   COMBAT TWO-COLUMN LAYOUT
-================================*/
+.combat-hit-flash {
+  background-color: #330000 !important;
+  box-shadow: inset 0 0 80px red;
+}
+
+.combat-normal {
+  transition: all 0.25s ease;
+}
+
+.special-flash-bg {
+  background-color: #002244 !important;
+  box-shadow: inset 0 0 100px #00eaff;
+}
+
+#spark {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, #fff 0%, #00eaff 40%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 0.15s ease;
+}
+
+.spark-active {
+  opacity: 1 !important;
+  filter: brightness(3);
+}
+
+.hit-animate {
+  transform: scale(1.15);
+  filter: brightness(1.6);
+}
+
+.normal {
+  transform: scale(1);
+  filter: brightness(1);
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
 
 #combat-container {
   width: 100%;
@@ -76,16 +133,14 @@ button:active{ transform:scale(0.95); filter:brightness(1.4); }
   gap: 20px;
 }
 
-/* LEFT SIDE */
 #combat-left {
   width: 55%;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  z-index: 2; /* above grid */
+  z-index: 2;
 }
 
-/* Combat buttons layout */
 #combat-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -93,7 +148,6 @@ button:active{ transform:scale(0.95); filter:brightness(1.4); }
   justify-content: center;
 }
 
-/* RIGHT SIDE: Combat log box */
 #combat-log-container {
   width: 40%;
   max-height: 400px;
@@ -106,51 +160,57 @@ button:active{ transform:scale(0.95); filter:brightness(1.4); }
   z-index: 2;
 }
 
-/* Log text */
+#combat-log-container::-webkit-scrollbar {
+  width: 10px;
+}
+#combat-log-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.4);
+}
+#combat-log-container::-webkit-scrollbar-thumb {
+  background: #00eaff;
+  box-shadow: 0 0 10px #00eaff;
+  border-radius: 5px;
+}
+#combat-log-container::-webkit-scrollbar-thumb:hover {
+  background: #0099cc;
+}
+
 #combat-log p {
-  margin: 4px 0;
   text-align: left;
+  margin: 4px 0;
   font-size: 0.9rem;
 }
 
-/* Combat flash */
-.combat-hit-flash{
-  background-color:#330000 !important;
-  box-shadow: inset 0 0 60px red;
-}
-.combat-normal{
-  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+#portraits-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 10px;
 }
 
-/* Special flash */
-.special-flash-bg{
-  background-color:#002244 !important;
-  box-shadow:inset 0 0 80px #00eaff;
+#player-portrait,
+#enemy-portrait {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: #000;
 }
 
-/* Spark effect */
-#spark{
-  position:absolute;
-  top:28%;
-  left:50%;
-  width:60px;
-  height:60px;
-  transform:translateX(-50%);
-  background:radial-gradient(circle,#fff 0%,#00eaff 40%,transparent 70%);
-  opacity:0;
-  pointer-events:none;
-  z-index:5;
-  transition:opacity 0.15s ease;
+.hpbar-wrapper {
+  width: 100%;
+  height: 16px;
+  background: #222;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  margin-bottom: 6px;
 }
-.spark-active{ opacity:1 !important; }
 
-/* Player hit scaling */
-.hit-animate{
-  transform:scale(1.15);
-  filter:brightness(1.6);
-}
-.normal{
-  transform:scale(1);
-  filter:brightness(1);
-  transition:transform 0.2s ease,filter 0.2s ease;
+.hpbar {
+  height: 100%;
+  background: linear-gradient(90deg, #ff0033, #ff6600);
+  width: 100%;
+  border-radius: 8px;
+  transition: width 0.25s ease;
 }
