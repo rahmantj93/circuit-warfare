@@ -117,6 +117,12 @@ function renderScene() {
   const s = getScene(gameState.currentSceneId);
   if (!s) return;
 
+  // Special handling for final endings
+  if ([21, 22, 23].includes(s.id)) {
+    showEndingCard(s);
+    return;
+  }
+
   // Resolve ending dynamically
   if (s.id === 20) {
     gameState.currentSceneId = determineEndingScene();
@@ -167,6 +173,49 @@ function renderScene() {
     cbtn.classList.add("hidden");
     $("choice-buttons").innerHTML = "<p>— End of demo —</p>";
   }
+}
+
+function showEndingCard(scene) {
+  goToScreen("outcome-screen");
+
+  const title = $("outcome-title");
+  const msg = $("outcome-message");
+  const retryBtn = $("retryBtn");
+  const contBtn = $("continueAfterBattle");
+  const menuBtn = $("menuBtn");
+  const screen = $("outcome-screen");
+
+  // Reset old ending classes
+  screen.classList.remove("ending-relay", "ending-side", "ending-best");
+
+  // Pick title + theme
+  if (scene.id === 21) {
+    title.textContent = "Relay Ending";
+    screen.classList.add("ending-relay");
+  }
+
+  if (scene.id === 22) {
+    title.textContent = "Side Street Ending";
+    screen.classList.add("ending-side");
+  }
+
+  if (scene.id === 23) {
+    title.textContent = "Overclocked Truth";
+    screen.classList.add("ending-best");
+  }
+
+  msg.textContent = scene.text;
+
+  // Hide retry on final endings
+  retryBtn.classList.add("hidden");
+
+  // Hide the normal Main Menu button to avoid duplicates
+  menuBtn.classList.add("hidden");
+  contBtn.classList.remove("hidden");
+  contBtn.textContent = "Main Menu";
+  contBtn.onclick = () => {
+    goToScreen("main-menu");
+  };
 }
 
 // ==========================================
@@ -223,10 +272,10 @@ const enemyTemplates = {
   },
   boss: {
     name: "Apex Guardian",
-    maxHp: 90,
-    hp: 90,
-    atk: 16,
-    def: 8
+    maxHp: 70,
+    hp: 70,
+    atk: 12,
+    def: 6
   }
 };
 
@@ -577,14 +626,9 @@ function enemyTurn() {
 // END COMBAT
 // ==========================================
 
+
 function endCombat(win) {
   closeInventoryPanel();
-  goToScreen("outcome-screen");
-
-  const title = $("outcome-title");
-  if (title) {
-    title.textContent = win ? "VICTORY!" : "GAME OVER";
-  }
 
   let rewardText = "";
 
@@ -593,34 +637,102 @@ function endCombat(win) {
     rewardText = ` Reward gained: ${reward}.`;
   }
 
-  const msg = $("outcome-message");
-  if (msg) {
-    msg.textContent = win
-      ? `You survived the encounter.${rewardText}`
-      : "You were defeated in combat.";
-  }
+  const combatScreen = $("combat-screen");
+  const overlay = $("combat-finish-overlay");
 
-  updateHUD();
-
-  $("retryBtn").onclick = () => {
-    gameState.pendingEnemyType = gameState.currentEnemyType;
-    startCombat();
-  };
-
-  $("menuBtn").onclick = () => goToScreen("main-menu");
-
-  const cont = $("continueAfterBattle");
+  // Play victory / defeat cue
   if (win) {
-    cont.classList.remove("hidden");
-    cont.onclick = () => {
-      gameState.currentSceneId = gameState.postCombatSceneId || 6;
-      goToScreen("story-screen");
-      renderScene();
-    };
+    safePlay("sfx-victory");
   } else {
-    cont.classList.add("hidden");
+    safePlay("sfx-defeat");
   }
+
+  // Final impact shake ONLY at combat end
+  if (combatScreen) {
+    combatScreen.classList.remove("final-impact", "combat-finish");
+    void combatScreen.offsetWidth;
+    combatScreen.classList.add("final-impact");
+  }
+
+  // Prepare overlay text
+  if (overlay) {
+    overlay.classList.remove("victory", "defeat", "combat-overlay-show", "glitch-active");
+    overlay.textContent = win ? "TARGET ELIMINATED" : "SYSTEM FAILURE";
+    overlay.setAttribute("data-text", overlay.textContent);
+
+    if (win) {
+      overlay.classList.add("victory");
+    } else {
+      overlay.classList.add("defeat");
+    }
+
+    void overlay.offsetWidth;
+    overlay.classList.add("combat-overlay-show", "glitch-active");
+  }
+
+  // Fade/zoom combat screen during delay
+  if (combatScreen) {
+    void combatScreen.offsetWidth;
+    combatScreen.classList.add("combat-finish");
+  }
+
+  setTimeout(() => {
+    if (combatScreen) {
+      combatScreen.classList.remove("combat-finish", "final-impact");
+    }
+
+    if (overlay) {
+      overlay.classList.remove("combat-overlay-show", "glitch-active", "victory", "defeat");
+      overlay.textContent = "";
+      overlay.removeAttribute("data-text");
+    }
+
+    goToScreen("outcome-screen");
+
+    const title = $("outcome-title");
+    if (title) {
+      title.textContent = win ? "VICTORY!" : "GAME OVER";
+    }
+
+    const msg = $("outcome-message");
+    if (msg) {
+      msg.textContent = win
+        ? `You survived the encounter.${rewardText}`
+        : "You were defeated in combat.";
+    }
+
+    updateHUD();
+
+    $("retryBtn").onclick = () => {
+      gameState.pendingEnemyType = gameState.currentEnemyType;
+      startCombat();
+    };
+
+    $("menuBtn").onclick = () => goToScreen("main-menu");
+
+    const cont = $("continueAfterBattle");
+    const menuBtn = $("menuBtn");
+    const retryBtn = $("retryBtn");
+
+    // Restore normal outcome buttons
+    menuBtn.classList.remove("hidden");
+    retryBtn.classList.remove("hidden");
+    cont.textContent = "Continue";
+
+    if (win) {
+      cont.classList.remove("hidden");
+      cont.onclick = () => {
+        gameState.currentSceneId = gameState.postCombatSceneId || 6;
+        goToScreen("story-screen");
+        renderScene();
+      };
+    } else {
+      cont.classList.add("hidden");
+    }
+
+  }, 1000);
 }
+
 
 // ==========================================
 // DOM READY
