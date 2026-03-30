@@ -126,49 +126,13 @@ let player = {
   }
 };
 
-// ---------- Enemy Roster ----------
-const enemyRoster = [
-  {
-    name: "Syntech Drone",
-    maxHp: 40,
-    hp: 40,
-    atk: 10,
-    def: 5
-  },
-  {
-    name: "Street Enforcer",
-    maxHp: 55,
-    hp: 55,
-    atk: 9,
-    def: 7
-  },
-  {
-    name: "Neon Hacker",
-    maxHp: 30,
-    hp: 30,
-    atk: 13,
-    def: 4
-  }
-];
-
 let enemy = {
-  name: "",
-  maxHp: 0,
-  hp: 0,
-  atk: 0,
-  def: 0
+  name: "Syntech Drone",
+  maxHp: 40,
+  hp: 40,
+  atk: 10,
+  def: 5
 };
-
-function pickRandomEnemy() {
-  const randomIndex = Math.floor(Math.random() * enemyRoster.length);
-  const chosen = enemyRoster[randomIndex];
-
-  enemy.name = chosen.name;
-  enemy.maxHp = chosen.maxHp;
-  enemy.hp = chosen.hp;
-  enemy.atk = chosen.atk;
-  enemy.def = chosen.def;
-}
 
 const TECH_GAIN = 10;
 let playerIsDefending = false;
@@ -192,7 +156,7 @@ function startCombat() {
   goToScreen("combat-screen");
   closeInventoryPanel();
 
-  pickRandomEnemy();
+  enemy.hp = enemy.maxHp;
   player.tech = 0;
   playerIsDefending = false;
 
