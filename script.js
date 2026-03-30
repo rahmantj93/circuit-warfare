@@ -11,7 +11,8 @@ function goToScreen(id) {
 // ---------- Story State ----------
 const gameState = {
   currentSceneId: 1,
-  postCombatSceneId: null
+  postCombatSceneId: null,
+  pendingEnemyType: null
 };
 
 // ---------- Story Scenes ----------
@@ -44,12 +45,35 @@ const scenes = [
   },
 
   { id: 8, text: "You scale a fire escape and reach a rooftop lined with old transmitter dishes. Neon static pulses through the rain as a hidden terminal flickers online.", next: 10 },
-
   { id: 9, text: "You move through the side street and find a hidden cache tucked behind a broken vending machine. Someone was here recently — the ground is still warm.", next: 10 },
 
-  { id: 10, text: "Your HUD decrypts part of the stolen shard. It reveals a bigger conspiracy inside Dunkel City's network. Whatever comes next, this was only the beginning.", next: 11 },
+  { id: 10, text: "Your HUD decrypts more of the shard. It reveals a route to a deeper relay hub beneath the district.", next: 11 },
 
-  { id: 11, text: "End of Chapter One. More missions coming soon!" }
+  {
+    id: 11,
+    text: "Two access routes appear on your HUD. One route goes through a security checkpoint. The other threads through a maintenance shaft.",
+    choices: [
+      { text: "Go through the security checkpoint", next: 12 },
+      { text: "Take the maintenance shaft", next: 13 }
+    ]
+  },
+
+  { id: 12, text: "You approach the checkpoint. Heavy footsteps echo nearby.", next: 14 },
+  { id: 13, text: "You crawl through the maintenance shaft. Ahead, a reinforced figure drops into your path.", next: 14 },
+
+  { id: 14, text: "A Street Enforcer blocks your route to the relay controls.", triggersCombat: true, enemyType: "enforcer", next: 15 },
+
+  { id: 15, text: "You force the controls open and begin the download, but a hostile signal floods your visor. Someone is fighting back from inside the network.", next: 16 },
+
+  { id: 16, text: "A Neon Hacker hijacks nearby systems and attacks through the city grid.", triggersCombat: true, enemyType: "hacker", next: 17 },
+
+  { id: 17, text: "The network stabilises for a moment. Hidden behind the noise is the entrance to the central relay chamber.", next: 18 },
+
+  { id: 18, text: "As the chamber opens, a giant war machine powers on. The Apex Guardian has awakened.", triggersCombat: true, enemyType: "boss", next: 19 },
+
+  { id: 19, text: "The Apex Guardian crashes to the floor. For a moment, Dunkel City's network falls silent. Whatever you uncovered tonight was only the outer layer of something far bigger.", next: 20 },
+
+  { id: 20, text: "End of Chapter Two. Multiple endings coming next." }
 ];
 
 function getScene(id) {
@@ -62,13 +86,13 @@ function renderScene() {
 
   if (s.triggersCombat) {
     gameState.postCombatSceneId = s.next || null;
+    gameState.pendingEnemyType = s.enemyType || null;
     startCombat();
     return;
   }
 
   $("story-text").textContent = s.text;
   $("choice-buttons").innerHTML = "";
-
   const cbtn = $("continueStoryBtn");
 
   if (s.choices) {
@@ -83,14 +107,12 @@ function renderScene() {
       };
       $("choice-buttons").appendChild(b);
     });
-
   } else if (s.next) {
     cbtn.classList.remove("hidden");
     cbtn.onclick = () => {
       gameState.currentSceneId = s.next;
       renderScene();
     };
-
   } else {
     cbtn.classList.add("hidden");
     $("choice-buttons").innerHTML = "<p>— End of demo —</p>";
@@ -126,13 +148,64 @@ let player = {
   }
 };
 
-let enemy = {
-  name: "Syntech Drone",
-  maxHp: 40,
-  hp: 40,
-  atk: 10,
-  def: 5
+// ---------- Enemy Templates ----------
+const enemyTemplates = {
+  drone: {
+    name: "Syntech Drone",
+    maxHp: 40,
+    hp: 40,
+    atk: 10,
+    def: 5
+  },
+  enforcer: {
+    name: "Street Enforcer",
+    maxHp: 55,
+    hp: 55,
+    atk: 9,
+    def: 7
+  },
+  hacker: {
+    name: "Neon Hacker",
+    maxHp: 30,
+    hp: 30,
+    atk: 13,
+    def: 4
+  },
+  boss: {
+    name: "Apex Guardian",
+    maxHp: 90,
+    hp: 90,
+    atk: 16,
+    def: 8
+  }
 };
+
+const randomEnemyTypes = ["drone", "enforcer", "hacker"];
+
+let enemy = {
+  name: "",
+  maxHp: 0,
+  hp: 0,
+  atk: 0,
+  def: 0
+};
+
+function loadEnemy(type) {
+  const chosen = enemyTemplates[type];
+  if (!chosen) return;
+
+  enemy.name = chosen.name;
+  enemy.maxHp = chosen.maxHp;
+  enemy.hp = chosen.hp;
+  enemy.atk = chosen.atk;
+  enemy.def = chosen.def;
+}
+
+function pickRandomEnemy() {
+  const randomIndex = Math.floor(Math.random() * randomEnemyTypes.length);
+  const chosenType = randomEnemyTypes[randomIndex];
+  loadEnemy(chosenType);
+}
 
 const TECH_GAIN = 10;
 let playerIsDefending = false;
@@ -156,7 +229,13 @@ function startCombat() {
   goToScreen("combat-screen");
   closeInventoryPanel();
 
-  enemy.hp = enemy.maxHp;
+  if (gameState.pendingEnemyType) {
+    loadEnemy(gameState.pendingEnemyType);
+    gameState.pendingEnemyType = null;
+  } else {
+    pickRandomEnemy();
+  }
+
   player.tech = 0;
   playerIsDefending = false;
 
@@ -284,6 +363,13 @@ function useInventoryItem(itemKey) {
 // ==========================================
 
 function giveBattleReward() {
+  if (enemy.name === "Apex Guardian") {
+    player.inventory.healthPack.quantity += 1;
+    player.inventory.techCell.quantity += 1;
+    writeLog("You recovered a Health Pack and a Tech Cell from the Guardian's core.");
+    return "Health Pack + Tech Cell";
+  }
+
   const roll = Math.random();
 
   if (roll < 0.5) {
@@ -367,7 +453,6 @@ function playerSpecial() {
 
 function enemyTurn() {
   setTimeout(() => {
-
     if (Math.random() < 0.2) {
       writeLog(`${enemy.name} braces defensively.`);
       enemy.def += 2;
@@ -432,7 +517,6 @@ function enemyTurn() {
     if (player.hp <= 0) {
       endCombat(false);
     }
-
   }, 300);
 }
 
@@ -495,8 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   $("menuBtn").onclick = () => goToScreen("main-menu");
-  $("howToPlayBtn").onclick = () =>
-    alert("Read the story and make choices.");
+  $("howToPlayBtn").onclick = () => alert("Read the story and make choices.");
 
   $("attackBtn").onclick = playerAttack;
   $("defendBtn").onclick = playerDefend;
