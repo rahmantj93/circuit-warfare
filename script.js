@@ -4,15 +4,20 @@ const show = (id) => $(id)?.classList.remove("hidden");
 const hide = (id) => $(id)?.classList.add("hidden");
 
 function goToScreen(id) {
-  ["main-menu", "story-screen", "combat-screen", "outcome-screen"].forEach(hide);
+  ["main-menu", "story-screen", "combat-screen", "inventory-panel", "outcome-screen"].forEach(hide);
   show(id);
 }
 
-// ---------- Story ----------
-const gameState = { currentSceneId: 1 };
+// ---------- Story State ----------
+const gameState = {
+  currentSceneId: 1,
+  postCombatSceneId: null
+};
 
+// ---------- Story Scenes ----------
 const scenes = [
   { id: 1, text: "Dunkel City. Midnight. A distress signal hits your HUD.", next: 2 },
+
   {
     id: 2,
     text: "Two tunnels appear ahead.",
@@ -21,10 +26,30 @@ const scenes = [
       { text: "Take the right tunnel", next: 4 }
     ]
   },
+
   { id: 3, text: "Quiet… too quiet. Motion spikes.", next: 5 },
   { id: 4, text: "Market strip flickers. A drone scans the rooftops.", next: 5 },
-  { id: 5, text: "'Target nearby. Prepare for contact.'", triggersCombat: true },
-  { id: 6, text: "End of demo. Thanks for playing!" }
+
+  { id: 5, text: "'Target nearby. Prepare for contact.'", triggersCombat: true, next: 6 },
+
+  { id: 6, text: "The enemy collapses into a shower of sparks. Among the wreckage, you recover a glowing data shard.", next: 7 },
+
+  {
+    id: 7,
+    text: "The shard contains two possible leads. One points toward a rooftop signal relay. The other points to an abandoned side street where a dead drop may still be hidden.",
+    choices: [
+      { text: "Trace the rooftop signal relay", next: 8 },
+      { text: "Investigate the abandoned side street", next: 9 }
+    ]
+  },
+
+  { id: 8, text: "You scale a fire escape and reach a rooftop lined with old transmitter dishes. Neon static pulses through the rain as a hidden terminal flickers online.", next: 10 },
+
+  { id: 9, text: "You move through the side street and find a hidden cache tucked behind a broken vending machine. Someone was here recently — the ground is still warm.", next: 10 },
+
+  { id: 10, text: "Your HUD decrypts part of the stolen shard. It reveals a bigger conspiracy inside Dunkel City's network. Whatever comes next, this was only the beginning.", next: 11 },
+
+  { id: 11, text: "End of Chapter One. More missions coming soon!" }
 ];
 
 function getScene(id) {
@@ -36,12 +61,14 @@ function renderScene() {
   if (!s) return;
 
   if (s.triggersCombat) {
+    gameState.postCombatSceneId = s.next || null;
     startCombat();
     return;
   }
 
   $("story-text").textContent = s.text;
   $("choice-buttons").innerHTML = "";
+
   const cbtn = $("continueStoryBtn");
 
   if (s.choices) {
@@ -70,7 +97,11 @@ function renderScene() {
   }
 }
 
-// ---------- Combat ----------
+// ==========================================
+// COMBAT SYSTEM
+// ==========================================
+
+// ---------- Player ----------
 let player = {
   name: "Operative",
   maxHp: 60,
@@ -95,20 +126,58 @@ let player = {
   }
 };
 
+// ---------- Enemy Roster ----------
+const enemyRoster = [
+  {
+    name: "Syntech Drone",
+    maxHp: 40,
+    hp: 40,
+    atk: 10,
+    def: 5
+  },
+  {
+    name: "Street Enforcer",
+    maxHp: 55,
+    hp: 55,
+    atk: 9,
+    def: 7
+  },
+  {
+    name: "Neon Hacker",
+    maxHp: 30,
+    hp: 30,
+    atk: 13,
+    def: 4
+  }
+];
+
 let enemy = {
-  name: "Syntech Drone",
-  maxHp: 40,
-  hp: 40,
-  atk: 10,
-  def: 5
+  name: "",
+  maxHp: 0,
+  hp: 0,
+  atk: 0,
+  def: 0
 };
+
+function pickRandomEnemy() {
+  const randomIndex = Math.floor(Math.random() * enemyRoster.length);
+  const chosen = enemyRoster[randomIndex];
+
+  enemy.name = chosen.name;
+  enemy.maxHp = chosen.maxHp;
+  enemy.hp = chosen.hp;
+  enemy.atk = chosen.atk;
+  enemy.def = chosen.def;
+}
 
 const TECH_GAIN = 10;
 let playerIsDefending = false;
 
+// ---------- Safe Audio ----------
 function safePlay(id) {
   const el = $(id);
   if (!el) return;
+
   try {
     el.currentTime = 0;
     const p = el.play();
@@ -118,12 +187,19 @@ function safePlay(id) {
   } catch (_) {}
 }
 
+// ---------- Start Combat ----------
 function startCombat() {
   goToScreen("combat-screen");
   closeInventoryPanel();
 
-  enemy.hp = enemy.maxHp;
+  pickRandomEnemy();
   player.tech = 0;
+  playerIsDefending = false;
+
+  // If retrying after death, restore HP
+  if (player.hp <= 0) {
+    player.hp = player.maxHp;
+  }
 
   const logBox = $("combat-log");
   if (logBox) logBox.innerHTML = "";
@@ -132,6 +208,7 @@ function startCombat() {
   updateHUD();
 }
 
+// ---------- HUD ----------
 function updateHUD() {
   const enemyInfo = $("enemy-info");
   const playerInfo = $("player-info");
@@ -154,6 +231,7 @@ function updateHUD() {
   if (playerBar) playerBar.style.width = playerPct + "%";
 }
 
+// ---------- Combat Log ----------
 function writeLog(msg) {
   const box = $("combat-log");
   if (!box) return;
@@ -164,7 +242,10 @@ function writeLog(msg) {
   box.scrollTop = box.scrollHeight;
 }
 
-// ---------- Inventory ----------
+// ==========================================
+// INVENTORY SYSTEM
+// ==========================================
+
 function openInventoryPanel() {
   renderInventoryPanel();
   $("inventory-panel")?.classList.remove("hidden");
@@ -234,7 +315,28 @@ function useInventoryItem(itemKey) {
   enemyTurn();
 }
 
-// ---------- Player Actions ----------
+// ==========================================
+// REWARDS / LOOT
+// ==========================================
+
+function giveBattleReward() {
+  const roll = Math.random();
+
+  if (roll < 0.5) {
+    player.inventory.healthPack.quantity += 1;
+    writeLog("You found a Health Pack.");
+    return "Health Pack";
+  } else {
+    player.inventory.techCell.quantity += 1;
+    writeLog("You found a Tech Cell.");
+    return "Tech Cell";
+  }
+}
+
+// ==========================================
+// PLAYER ACTIONS
+// ==========================================
+
 function playerAttack() {
   safePlay("sfx-attack");
 
@@ -254,10 +356,8 @@ function playerAttack() {
 
 function playerDefend() {
   safePlay("sfx-defend");
-
   playerIsDefending = true;
   writeLog("You brace for impact.");
-
   enemyTurn();
 }
 
@@ -282,7 +382,7 @@ function playerSpecial() {
     cs.classList.add("special-flash-bg");
     setTimeout(() => cs.classList.remove("special-flash-bg"), 300);
 
-    // Optional screen shake
+    // Optional screen shake if CSS exists
     cs.classList.add("shake");
     setTimeout(() => cs.classList.remove("shake"), 300);
   }
@@ -297,7 +397,10 @@ function playerSpecial() {
   enemyTurn();
 }
 
-// ---------- Enemy Turn ----------
+// ==========================================
+// ENEMY TURN
+// ==========================================
+
 function enemyTurn() {
   setTimeout(() => {
 
@@ -369,7 +472,10 @@ function enemyTurn() {
   }, 300);
 }
 
-// ---------- End Combat ----------
+// ==========================================
+// END COMBAT
+// ==========================================
+
 function endCombat(win) {
   closeInventoryPanel();
   goToScreen("outcome-screen");
@@ -379,6 +485,22 @@ function endCombat(win) {
     title.textContent = win ? "VICTORY!" : "GAME OVER";
   }
 
+  let rewardText = "";
+
+  if (win) {
+    const reward = giveBattleReward();
+    rewardText = ` Reward gained: ${reward}.`;
+  }
+
+  const msg = $("outcome-message");
+  if (msg) {
+    msg.textContent = win
+      ? `You survived the encounter.${rewardText}`
+      : "You were defeated in combat.";
+  }
+
+  updateHUD();
+
   $("retryBtn").onclick = () => startCombat();
   $("menuBtn").onclick = () => goToScreen("main-menu");
 
@@ -386,7 +508,7 @@ function endCombat(win) {
   if (win) {
     cont.classList.remove("hidden");
     cont.onclick = () => {
-      gameState.currentSceneId = 6;
+      gameState.currentSceneId = gameState.postCombatSceneId || 6;
       goToScreen("story-screen");
       renderScene();
     };
@@ -395,7 +517,10 @@ function endCombat(win) {
   }
 }
 
-// ---------- DOM Ready ----------
+// ==========================================
+// DOM READY
+// ==========================================
+
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Script loaded, attaching listeners…");
 
@@ -406,7 +531,8 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   $("menuBtn").onclick = () => goToScreen("main-menu");
-  $("howToPlayBtn").onclick = () => alert("Read the story and make choices.");
+  $("howToPlayBtn").onclick = () =>
+    alert("Read the story and make choices.");
 
   $("attackBtn").onclick = playerAttack;
   $("defendBtn").onclick = playerDefend;
@@ -420,4 +546,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
   console.log("Listeners attached.");
 });
-``
