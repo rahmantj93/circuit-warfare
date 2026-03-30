@@ -46,6 +46,7 @@ function renderScene() {
 
   if (s.choices) {
     cbtn.classList.add("hidden");
+
     s.choices.forEach((choice) => {
       const b = document.createElement("button");
       b.textContent = choice.text;
@@ -55,12 +56,14 @@ function renderScene() {
       };
       $("choice-buttons").appendChild(b);
     });
+
   } else if (s.next) {
     cbtn.classList.remove("hidden");
     cbtn.onclick = () => {
       gameState.currentSceneId = s.next;
       renderScene();
     };
+
   } else {
     cbtn.classList.add("hidden");
     $("choice-buttons").innerHTML = "<p>— End of demo —</p>";
@@ -76,7 +79,20 @@ let player = {
   def: 6,
   tech: 0,
   maxTech: 30,
-  items: 2
+  inventory: {
+    healthPack: {
+      name: "Health Pack",
+      quantity: 2,
+      effect: "heal",
+      value: 20
+    },
+    techCell: {
+      name: "Tech Cell",
+      quantity: 1,
+      effect: "tech",
+      value: 15
+    }
+  }
 };
 
 let enemy = {
@@ -92,26 +108,27 @@ let playerIsDefending = false;
 
 function safePlay(id) {
   const el = $(id);
-  if (!el) {
-    console.warn(`Missing audio element: ${id}`);
-    return;
-  }
+  if (!el) return;
   try {
     el.currentTime = 0;
     const p = el.play();
-    if (p && typeof p.catch === 'function') p.catch(() => {});
+    if (p && typeof p.catch === "function") {
+      p.catch(() => {});
+    }
   } catch (_) {}
 }
 
 function startCombat() {
   goToScreen("combat-screen");
+  closeInventoryPanel();
+
   enemy.hp = enemy.maxHp;
   player.tech = 0;
 
   const logBox = $("combat-log");
   if (logBox) logBox.innerHTML = "";
-  writeLog(`A hostile ${enemy.name} appears!`);
 
+  writeLog(`A hostile ${enemy.name} appears!`);
   updateHUD();
 }
 
@@ -121,9 +138,13 @@ function updateHUD() {
   const enemyBar = $("enemy-hp-bar");
   const playerBar = $("player-hp-bar");
 
-  if (enemyInfo) enemyInfo.textContent = `${enemy.name} — HP: ${enemy.hp}/${enemy.maxHp}`;
+  if (enemyInfo) {
+    enemyInfo.textContent = `${enemy.name} — HP: ${enemy.hp}/${enemy.maxHp}`;
+  }
+
   if (playerInfo) {
-    playerInfo.textContent = `You — HP: ${player.hp}/${player.maxHp} | Tech: ${player.tech}/${player.maxTech} | Items: ${player.items}`;
+    playerInfo.textContent =
+      `You — HP: ${player.hp}/${player.maxHp} | Tech: ${player.tech}/${player.maxTech} | HP Packs: ${player.inventory.healthPack.quantity} | Tech Cells: ${player.inventory.techCell.quantity}`;
   }
 
   const enemyPct = Math.max(0, Math.min(100, (enemy.hp / enemy.maxHp) * 100));
@@ -136,26 +157,107 @@ function updateHUD() {
 function writeLog(msg) {
   const box = $("combat-log");
   if (!box) return;
+
   const p = document.createElement("p");
   p.textContent = msg;
   box.appendChild(p);
   box.scrollTop = box.scrollHeight;
 }
 
+// ---------- Inventory ----------
+function openInventoryPanel() {
+  renderInventoryPanel();
+  $("inventory-panel")?.classList.remove("hidden");
+}
+
+function closeInventoryPanel() {
+  $("inventory-panel")?.classList.add("hidden");
+}
+
+function renderInventoryPanel() {
+  const list = $("inventory-list");
+  if (!list) return;
+
+  list.innerHTML = "";
+  const inventory = player.inventory;
+
+  Object.keys(inventory).forEach((key) => {
+    const item = inventory[key];
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "inventory-item";
+
+    wrapper.innerHTML = `
+      <strong>${item.name}</strong><br>
+      Quantity: ${item.quantity}<br>
+      Effect: ${item.effect} (${item.value})
+    `;
+
+    const useBtn = document.createElement("button");
+    useBtn.textContent = "Use";
+    useBtn.disabled = item.quantity <= 0;
+
+    useBtn.onclick = () => {
+      useInventoryItem(key);
+    };
+
+    wrapper.appendChild(useBtn);
+    list.appendChild(wrapper);
+  });
+}
+
+function useInventoryItem(itemKey) {
+  const item = player.inventory[itemKey];
+
+  if (!item || item.quantity <= 0) {
+    writeLog("Item unavailable.");
+    return;
+  }
+
+  if (item.effect === "heal") {
+    player.hp = Math.min(player.maxHp, player.hp + item.value);
+    writeLog(`You used ${item.name} and restored ${item.value} HP.`);
+    safePlay("sfx-item");
+  }
+
+  if (item.effect === "tech") {
+    player.tech = Math.min(player.maxTech, player.tech + item.value);
+    writeLog(`You used ${item.name} and restored ${item.value} Tech.`);
+    safePlay("sfx-item");
+  }
+
+  item.quantity--;
+  updateHUD();
+  closeInventoryPanel();
+
+  // Using an item consumes your turn
+  enemyTurn();
+}
+
+// ---------- Player Actions ----------
 function playerAttack() {
   safePlay("sfx-attack");
+
   const dmg = Math.max(1, player.atk - enemy.def);
   enemy.hp -= dmg;
+
   writeLog(`You attack for ${dmg} damage.`);
   updateHUD();
-  if (enemy.hp <= 0) return endCombat(true);
+
+  if (enemy.hp <= 0) {
+    endCombat(true);
+    return;
+  }
+
   enemyTurn();
 }
 
 function playerDefend() {
   safePlay("sfx-defend");
+
   playerIsDefending = true;
   writeLog("You brace for impact.");
+
   enemyTurn();
 }
 
@@ -169,6 +271,7 @@ function playerSpecial() {
 
   const dmg = Math.max(1, player.atk * 2 - enemy.def);
   enemy.hp -= dmg;
+
   writeLog(`SPECIAL ATTACK for ${dmg}!`);
   player.tech = 0;
 
@@ -178,37 +281,37 @@ function playerSpecial() {
     void cs.offsetWidth;
     cs.classList.add("special-flash-bg");
     setTimeout(() => cs.classList.remove("special-flash-bg"), 300);
+
+    // Optional screen shake
+    cs.classList.add("shake");
+    setTimeout(() => cs.classList.remove("shake"), 300);
   }
 
   updateHUD();
-  if (enemy.hp <= 0) return endCombat(true);
-  enemyTurn();
-}
 
-function playerUseItem() {
-  if (player.items <= 0) {
-    writeLog("No items left!");
+  if (enemy.hp <= 0) {
+    endCombat(true);
     return;
   }
 
-  safePlay("sfx-item");
-  player.items--;
-  player.hp = Math.min(player.maxHp, player.hp + 20);
-  writeLog("You heal 20 HP.");
-  updateHUD();
   enemyTurn();
 }
 
+// ---------- Enemy Turn ----------
 function enemyTurn() {
   setTimeout(() => {
+
     if (Math.random() < 0.2) {
       writeLog(`${enemy.name} braces defensively.`);
       enemy.def += 2;
-      setTimeout(() => { enemy.def -= 2; }, 300);
+      setTimeout(() => {
+        enemy.def -= 2;
+      }, 300);
       return;
     }
 
     let dmg = Math.max(1, enemy.atk - player.def);
+
     if (playerIsDefending) {
       dmg = Math.floor(dmg / 2);
       playerIsDefending = false;
@@ -217,6 +320,7 @@ function enemyTurn() {
 
     player.hp -= dmg;
     safePlay("sfx-hit");
+
     writeLog(`${enemy.name} hits you for ${dmg}.`);
     updateHUD();
 
@@ -225,6 +329,7 @@ function enemyTurn() {
       cs.classList.remove("combat-normal", "combat-hit-flash");
       void cs.offsetWidth;
       cs.classList.add("combat-hit-flash");
+
       setTimeout(() => {
         cs.classList.remove("combat-hit-flash");
         cs.classList.add("combat-normal");
@@ -236,6 +341,7 @@ function enemyTurn() {
       pinfo.classList.remove("normal", "hit-animate");
       void pinfo.offsetWidth;
       pinfo.classList.add("hit-animate");
+
       setTimeout(() => {
         pinfo.classList.remove("hit-animate");
         pinfo.classList.add("normal");
@@ -247,20 +353,31 @@ function enemyTurn() {
       spark.classList.remove("spark-active");
       void spark.offsetWidth;
       spark.classList.add("spark-active");
-      setTimeout(() => spark.classList.remove("spark-active"), 200);
+
+      setTimeout(() => {
+        spark.classList.remove("spark-active");
+      }, 200);
     }
 
     player.tech = Math.min(player.maxTech, player.tech + TECH_GAIN);
     updateHUD();
 
-    if (player.hp <= 0) return endCombat(false);
+    if (player.hp <= 0) {
+      endCombat(false);
+    }
+
   }, 300);
 }
 
+// ---------- End Combat ----------
 function endCombat(win) {
+  closeInventoryPanel();
   goToScreen("outcome-screen");
+
   const title = $("outcome-title");
-  if (title) title.textContent = win ? "VICTORY!" : "GAME OVER";
+  if (title) {
+    title.textContent = win ? "VICTORY!" : "GAME OVER";
+  }
 
   $("retryBtn").onclick = () => startCombat();
   $("menuBtn").onclick = () => goToScreen("main-menu");
@@ -294,7 +411,13 @@ document.addEventListener("DOMContentLoaded", () => {
   $("attackBtn").onclick = playerAttack;
   $("defendBtn").onclick = playerDefend;
   $("specialBtn").onclick = playerSpecial;
-  $("itemBtn").onclick = playerUseItem;
+  $("itemBtn").onclick = openInventoryPanel;
+
+  const closeBtn = $("closeInventoryBtn");
+  if (closeBtn) {
+    closeBtn.onclick = closeInventoryPanel;
+  }
 
   console.log("Listeners attached.");
 });
+``

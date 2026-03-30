@@ -214,3 +214,55 @@ button:active {
   border-radius: 8px;
   transition: width 0.25s ease;
 }
+
+/* ============================================
+   INVENTORY PANEL
+============================================ */
+#inventory-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+
+#inventory-panel.hidden {
+  display: none;
+}
+
+
+#inventory-box {
+  width: 400px;
+  max-width: 90%;
+  background: #0b1020;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 0 20px rgba(0, 234, 255, 0.3);
+}
+
+#inventory-box h3 {
+  margin-top: 0;
+}
+
+#inventory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.inventory-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: left;
+}
+
+.inventory-item button {
+  margin-top: 8px;
+}
