@@ -12,7 +12,11 @@ function goToScreen(id) {
 const gameState = {
   currentSceneId: 1,
   postCombatSceneId: null,
-  pendingEnemyType: null
+  pendingEnemyType: null,
+  currentEnemyType: null,
+  storyFlags: {
+    routeChoice: null
+  }
 };
 
 // ---------- Story Scenes ----------
@@ -73,16 +77,52 @@ const scenes = [
 
   { id: 19, text: "The Apex Guardian crashes to the floor. For a moment, Dunkel City's network falls silent. Whatever you uncovered tonight was only the outer layer of something far bigger.", next: 20 },
 
-  { id: 20, text: "End of Chapter Two. Multiple endings coming next." }
+  { id: 20, text: "Resolving ending..." },
+
+  { id: 21, text: "Ending: Relay Path. By tracing the rooftop signal, you expose a hidden surveillance network buried deep in Dunkel City's infrastructure. The data shard becomes the first proof of a much larger conspiracy." },
+
+  { id: 22, text: "Ending: Side Street Path. The abandoned route reveals more than a hidden cache — it uncovers the remains of an old resistance network. Dunkel City's forgotten defenders may not be as gone as everyone believed." },
+
+  { id: 23, text: "Best Ending: Overclocked Truth. You reach the end with enough resources to fully decode the shard and preserve the relay core. With proof in hand and systems intact, you leave the chamber not as a survivor, but as the first real threat to the corporations controlling Dunkel City." }
 ];
 
 function getScene(id) {
   return scenes.find((s) => s.id === id);
 }
 
+function determineEndingScene() {
+  const hpPacks = player.inventory.healthPack.quantity;
+  const techCells = player.inventory.techCell.quantity;
+  const route = gameState.storyFlags.routeChoice;
+
+  // Best ending if player finishes with strong resources
+  if (hpPacks >= 2 && techCells >= 2) {
+    return 23;
+  }
+
+  // Route-based endings
+  if (route === "relay") {
+    return 21;
+  }
+
+  if (route === "sideStreet") {
+    return 22;
+  }
+
+  // Fallback ending
+  return 21;
+}
+
 function renderScene() {
   const s = getScene(gameState.currentSceneId);
   if (!s) return;
+
+  // Resolve ending dynamically
+  if (s.id === 20) {
+    gameState.currentSceneId = determineEndingScene();
+    renderScene();
+    return;
+  }
 
   if (s.triggersCombat) {
     gameState.postCombatSceneId = s.next || null;
@@ -102,6 +142,16 @@ function renderScene() {
       const b = document.createElement("button");
       b.textContent = choice.text;
       b.onclick = () => {
+        // Track important route choice at scene 7
+        if (s.id === 7) {
+          if (choice.next === 8) {
+            gameState.storyFlags.routeChoice = "relay";
+          }
+          if (choice.next === 9) {
+            gameState.storyFlags.routeChoice = "sideStreet";
+          }
+        }
+
         gameState.currentSceneId = choice.next;
         renderScene();
       };
@@ -194,12 +244,15 @@ function loadEnemy(type) {
   const chosen = enemyTemplates[type];
   if (!chosen) return;
 
+  gameState.currentEnemyType = type;
+
   enemy.name = chosen.name;
   enemy.maxHp = chosen.maxHp;
   enemy.hp = chosen.hp;
   enemy.atk = chosen.atk;
   enemy.def = chosen.def;
 }
+
 
 function pickRandomEnemy() {
   const randomIndex = Math.floor(Math.random() * randomEnemyTypes.length);
@@ -549,7 +602,11 @@ function endCombat(win) {
 
   updateHUD();
 
-  $("retryBtn").onclick = () => startCombat();
+  $("retryBtn").onclick = () => {
+    gameState.pendingEnemyType = gameState.currentEnemyType;
+    startCombat();
+  };
+
   $("menuBtn").onclick = () => goToScreen("main-menu");
 
   const cont = $("continueAfterBattle");
