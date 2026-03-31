@@ -80,65 +80,277 @@ function determineEndingScene() {
   return 21;
 }
 
-function renderScene() {
-  const s = getScene(gameState.currentSceneId);
-  if (!s) return;
+// ==========================================
+// COMBAT SYSTEM DATA
+// ==========================================
 
-  if ([21, 22, 23].includes(s.id)) {
-    showEndingCard(s);
+let player = {
+  name: "Operative",
+  maxHp: 60,
+  hp: 60,
+  atk: 12,
+  def: 6,
+  tech: 0,
+  maxTech: 30,
+  inventory: {
+    healthPack: { name: "Health Pack", quantity: 2, effect: "heal", value: 20 },
+    techCell: { name: "Tech Cell", quantity: 1, effect: "tech", value: 15 }
+  }
+};
+
+const enemyTemplates = {
+  drone: { name: "Syntech Drone", maxHp: 40, hp: 40, atk: 10, def: 5 },
+  enforcer: { name: "Street Enforcer", maxHp: 55, hp: 55, atk: 9, def: 7 },
+  hacker: { name: "Neon Hacker", maxHp: 30, hp: 30, atk: 13, def: 4 },
+  boss: { name: "Apex Guardian", maxHp: 70, hp: 70, atk: 12, def: 6 }
+};
+
+const randomEnemyTypes = ["drone", "enforcer", "hacker"];
+
+let enemy = {
+  name: "",
+  maxHp: 0,
+  hp: 0,
+  atk: 0,
+  def: 0
+};
+
+const TECH_GAIN = 10;
+let playerIsDefending = false;
+
+// ==========================================
+// LOCAL STORAGE SAVE / LOAD
+// ==========================================
+
+const SAVE_KEY = "circuitWarfareSave_v3";
+let suppressAutoSave = false;
+
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+const INITIAL_PLAYER = deepClone(player);
+const INITIAL_GAME_STATE = {
+  currentSceneId: 1,
+  postCombatSceneId: null,
+  pendingEnemyType: null,
+  currentEnemyType: null,
+  storyFlags: { routeChoice: null }
+};
+
+function withSaveSuppressed(fn) {
+  suppressAutoSave = true;
+  try {
+    fn();
+  } finally {
+    suppressAutoSave = false;
+  }
+}
+
+function resetRun() {
+  withSaveSuppressed(() => {
+    player = deepClone(INITIAL_PLAYER);
+
+    enemy.name = "";
+    enemy.maxHp = 0;
+    enemy.hp = 0;
+    enemy.atk = 0;
+    enemy.def = 0;
+
+    gameState.currentSceneId = INITIAL_GAME_STATE.currentSceneId;
+    gameState.postCombatSceneId = INITIAL_GAME_STATE.postCombatSceneId;
+    gameState.pendingEnemyType = INITIAL_GAME_STATE.pendingEnemyType;
+    gameState.currentEnemyType = INITIAL_GAME_STATE.currentEnemyType;
+    gameState.storyFlags = deepClone(INITIAL_GAME_STATE.storyFlags);
+
+    playerIsDefending = false;
+    closeInventoryPanel();
+    resetCombatVisuals();
+
+    const logBox = $("combat-log");
+    if (logBox) logBox.innerHTML = "";
+  });
+}
+
+function clearSave() {
+  localStorage.removeItem(SAVE_KEY);
+  syncContinueButton();
+}
+
+function getActiveScreenId() {
+  const screens = ["main-menu", "story-screen", "combat-screen", "outcome-screen"];
+  return screens.find((id) => !$(id)?.classList.contains("hidden")) || "main-menu";
+}
+
+function getCombatLogMessages() {
+  const box = $("combat-log");
+  if (!box) return [];
+  return Array.from(box.querySelectorAll("p")).map((p) => p.textContent);
+}
+
+function restoreCombatLog(messages = []) {
+  const box = $("combat-log");
+  if (!box) return;
+  box.innerHTML = "";
+  messages.forEach((msg) => {
+    const p = document.createElement("p");
+    p.textContent = msg;
+    box.appendChild(p);
+  });
+}
+
+function getOutcomeSnapshot() {
+  return {
+    title: $("outcome-title")?.textContent || "",
+    message: $("outcome-message")?.textContent || "",
+    continueHidden: $("continueAfterBattle")?.classList.contains("hidden") ?? true,
+    continueText: $("continueAfterBattle")?.textContent || "Continue",
+    retryHidden: $("retryBtn")?.classList.contains("hidden") ?? false,
+    menuHidden: $("menuBtn")?.classList.contains("hidden") ?? false,
+    endingClass:
+      ["ending-relay", "ending-side", "ending-best"].find((cls) =>
+        $("outcome-screen")?.classList.contains(cls)
+      ) || null
+  };
+}
+
+function saveGame() {
+  if (suppressAutoSave) return;
+
+  const saveData = {
+    gameState: deepClone(gameState),
+    player: deepClone(player),
+    enemy: deepClone(enemy),
+    activeScreen: getActiveScreenId(),
+    inventoryOpen: !($("inventory-panel")?.classList.contains("hidden")),
+    combatLog: getCombatLogMessages(),
+    outcome: getOutcomeSnapshot(),
+    savedAt: Date.now()
+  };
+
+  localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+  syncContinueButton();
+}
+
+function restoreOutcomeFromSave(outcome) {
+  withSaveSuppressed(() => {
+    goToScreen("outcome-screen");
+
+    const screen = $("outcome-screen");
+    const title = $("outcome-title");
+    const msg = $("outcome-message");
+    const cont = $("continueAfterBattle");
+    const retryBtn = $("retryBtn");
+    const menuBtn = $("menuBtn");
+
+    screen.classList.remove("ending-relay", "ending-side", "ending-best");
+    if (outcome.endingClass) {
+      screen.classList.add(outcome.endingClass);
+    }
+
+    title.textContent = outcome.title || "";
+    msg.textContent = outcome.message || "";
+
+    cont.textContent = outcome.continueText || "Continue";
+    cont.classList.toggle("hidden", !!outcome.continueHidden);
+    retryBtn.classList.toggle("hidden", !!outcome.retryHidden);
+    menuBtn.classList.toggle("hidden", !!outcome.menuHidden);
+
+    if (outcome.endingClass) {
+      cont.onclick = () => goToScreen("main-menu");
+      menuBtn.onclick = () => goToScreen("main-menu");
+      return;
+    }
+
+    retryBtn.onclick = () => {
+      gameState.pendingEnemyType = gameState.currentEnemyType;
+      startCombat();
+    };
+
+    menuBtn.onclick = () => goToScreen("main-menu");
+
+    if (!outcome.continueHidden) {
+      cont.onclick = () => {
+        gameState.currentSceneId = gameState.postCombatSceneId || 6;
+        goToScreen("story-screen");
+        renderScene();
+      };
+    }
+  });
+}
+
+function loadGame() {
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (!raw) {
+    alert("No saved game found.");
     return;
   }
 
-  if (s.id === 20) {
-    gameState.currentSceneId = determineEndingScene();
+  const data = JSON.parse(raw);
+
+  withSaveSuppressed(() => {
+    player = deepClone(data.player);
+
+    enemy.name = data.enemy.name;
+    enemy.maxHp = data.enemy.maxHp;
+    enemy.hp = data.enemy.hp;
+    enemy.atk = data.enemy.atk;
+    enemy.def = data.enemy.def;
+
+    gameState.currentSceneId = data.gameState.currentSceneId;
+    gameState.postCombatSceneId = data.gameState.postCombatSceneId;
+    gameState.pendingEnemyType = data.gameState.pendingEnemyType;
+    gameState.currentEnemyType = data.gameState.currentEnemyType;
+    gameState.storyFlags = deepClone(data.gameState.storyFlags || { routeChoice: null });
+
+    playerIsDefending = false;
+    closeInventoryPanel();
+    resetCombatVisuals();
+  });
+
+  // Restore final endings directly
+  if ([21, 22, 23].includes(gameState.currentSceneId)) {
+    showEndingCard(getScene(gameState.currentSceneId));
+    return;
+  }
+
+  if (data.activeScreen === "combat-screen") {
+    goToScreen("combat-screen");
+    restoreCombatLog(data.combatLog);
+    updateHUD();
+
+    if (data.inventoryOpen) {
+      openInventoryPanel();
+    }
+    return;
+  }
+
+  if (data.activeScreen === "outcome-screen") {
+    restoreOutcomeFromSave(data.outcome);
+    return;
+  }
+
+  if (data.activeScreen === "story-screen") {
+    goToScreen("story-screen");
     renderScene();
     return;
   }
 
-  if (s.triggersCombat) {
-    gameState.postCombatSceneId = s.next || null;
-    gameState.pendingEnemyType = s.enemyType || null;
-    startCombat();
-    return;
-  }
-
-  $("story-text").textContent = s.text;
-  const storyPanel = $("story-panel");
-  if (storyPanel) {
-    storyPanel.classList.remove("story-refresh");
-    void storyPanel.offsetWidth;
-    storyPanel.classList.add("story-refresh");
-  }
-
-  $("choice-buttons").innerHTML = "";
-  const cbtn = $("continueStoryBtn");
-
-  if (s.choices) {
-    cbtn.classList.add("hidden");
-    s.choices.forEach((choice) => {
-      const b = document.createElement("button");
-      b.textContent = choice.text;
-      b.onclick = () => {
-        if (s.id === 7) {
-          if (choice.next === 8) gameState.storyFlags.routeChoice = "relay";
-          if (choice.next === 9) gameState.storyFlags.routeChoice = "sideStreet";
-        }
-        gameState.currentSceneId = choice.next;
-        renderScene();
-      };
-      $("choice-buttons").appendChild(b);
-    });
-  } else if (s.next) {
-    cbtn.classList.remove("hidden");
-    cbtn.onclick = () => {
-      gameState.currentSceneId = s.next;
-      renderScene();
-    };
-  } else {
-    cbtn.classList.add("hidden");
-    $("choice-buttons").innerHTML = "<p>— End of demo —</p>";
-  }
+  goToScreen("main-menu");
 }
+
+function syncContinueButton() {
+  const btn = $("continueBtn");
+  if (!btn) return;
+
+  const hasSave = !!localStorage.getItem(SAVE_KEY);
+  btn.disabled = !hasSave;
+  btn.style.opacity = hasSave ? "1" : "0.5";
+}
+
+// ==========================================
+// STORY / ENDINGS
+// ==========================================
 
 function showEndingCard(scene) {
   goToScreen("outcome-screen");
@@ -166,58 +378,110 @@ function showEndingCard(scene) {
   }
 
   msg.textContent = scene.text;
+
   retryBtn.classList.add("hidden");
   menuBtn.classList.add("hidden");
+
   contBtn.classList.remove("hidden");
   contBtn.textContent = "Main Menu";
   contBtn.onclick = () => goToScreen("main-menu");
+
+  saveGame();
 }
 
-// ---------- Combat System ----------
-let player = {
-  name: "Operative",
-  maxHp: 60,
-  hp: 60,
-  atk: 12,
-  def: 6,
-  tech: 0,
-  maxTech: 30,
-  inventory: {
-    healthPack: { name: "Health Pack", quantity: 2, effect: "heal", value: 20 },
-    techCell: { name: "Tech Cell", quantity: 1, effect: "tech", value: 15 }
-  }
-};
+function renderScene() {
+  const s = getScene(gameState.currentSceneId);
+  if (!s) return;
 
-const enemyTemplates = {
-  drone: { name: "Syntech Drone", maxHp: 40, hp: 40, atk: 10, def: 5 },
-  enforcer: { name: "Street Enforcer", maxHp: 55, hp: 55, atk: 9, def: 7 },
-  hacker: { name: "Neon Hacker", maxHp: 30, hp: 30, atk: 13, def: 4 },
-  boss: { name: "Apex Guardian", maxHp: 70, hp: 70, atk: 12, def: 6 }
-};
-const randomEnemyTypes = ["drone", "enforcer", "hacker"];
-let enemy = { name: "", maxHp: 0, hp: 0, atk: 0, def: 0 };
+  if ([21, 22, 23].includes(s.id)) {
+    showEndingCard(s);
+    return;
+  }
+
+  if (s.id === 20) {
+    gameState.currentSceneId = determineEndingScene();
+    renderScene();
+    return;
+  }
+
+  if (s.triggersCombat) {
+    gameState.postCombatSceneId = s.next || null;
+    gameState.pendingEnemyType = s.enemyType || null;
+    startCombat();
+    return;
+  }
+
+  $("story-text").textContent = s.text;
+
+  const storyPanel = $("story-panel");
+  if (storyPanel) {
+    storyPanel.classList.remove("story-refresh");
+    void storyPanel.offsetWidth;
+    storyPanel.classList.add("story-refresh");
+  }
+
+  $("choice-buttons").innerHTML = "";
+  const cbtn = $("continueStoryBtn");
+
+  if (s.choices) {
+    cbtn.classList.add("hidden");
+
+    s.choices.forEach((choice) => {
+      const b = document.createElement("button");
+      b.textContent = choice.text;
+      b.onclick = () => {
+        if (s.id === 7) {
+          if (choice.next === 8) gameState.storyFlags.routeChoice = "relay";
+          if (choice.next === 9) gameState.storyFlags.routeChoice = "sideStreet";
+        }
+
+        gameState.currentSceneId = choice.next;
+        renderScene();
+      };
+      $("choice-buttons").appendChild(b);
+    });
+
+  } else if (s.next) {
+    cbtn.classList.remove("hidden");
+    cbtn.onclick = () => {
+      gameState.currentSceneId = s.next;
+      renderScene();
+    };
+
+  } else {
+    cbtn.classList.add("hidden");
+    $("choice-buttons").innerHTML = "<p>— End of demo —</p>";
+  }
+
+  saveGame();
+}
+
+// ==========================================
+// COMBAT SYSTEM
+// ==========================================
 
 function loadEnemy(type) {
   const chosen = enemyTemplates[type];
   if (!chosen) return;
+
   gameState.currentEnemyType = type;
+
   enemy.name = chosen.name;
   enemy.maxHp = chosen.maxHp;
   enemy.hp = chosen.hp;
   enemy.atk = chosen.atk;
   enemy.def = chosen.def;
 }
+
 function pickRandomEnemy() {
   const chosenType = randomEnemyTypes[Math.floor(Math.random() * randomEnemyTypes.length)];
   loadEnemy(chosenType);
 }
 
-const TECH_GAIN = 10;
-let playerIsDefending = false;
-
 function safePlay(id) {
   const el = $(id);
   if (!el) return;
+
   try {
     el.currentTime = 0;
     const p = el.play();
@@ -228,12 +492,14 @@ function safePlay(id) {
 function resetCombatVisuals() {
   const combatScreen = $("combat-screen");
   const overlay = $("combat-finish-overlay");
+
   if (combatScreen) {
     combatScreen.classList.remove("combat-finish", "final-impact", "combat-hit-flash", "special-flash-bg", "shake");
     combatScreen.style.opacity = "";
     combatScreen.style.transform = "";
     combatScreen.style.filter = "";
   }
+
   if (overlay) {
     overlay.classList.remove("combat-overlay-show", "glitch-active", "victory", "defeat");
     overlay.textContent = "";
@@ -255,12 +521,17 @@ function startCombat() {
 
   player.tech = 0;
   playerIsDefending = false;
-  if (player.hp <= 0) player.hp = player.maxHp;
+
+  if (player.hp <= 0) {
+    player.hp = player.maxHp;
+  }
 
   const logBox = $("combat-log");
   if (logBox) logBox.innerHTML = "";
+
   writeLog(`A hostile ${enemy.name} appears!`);
   updateHUD();
+  saveGame();
 }
 
 function updateHUD() {
@@ -316,47 +587,63 @@ function updateHUD() {
 function writeLog(msg) {
   const box = $("combat-log");
   if (!box) return;
+
   const p = document.createElement("p");
   p.textContent = msg;
   box.appendChild(p);
   box.scrollTop = box.scrollHeight;
 }
 
+// ==========================================
+// INVENTORY SYSTEM
+// ==========================================
+
 function openInventoryPanel() {
   renderInventoryPanel();
+
   const panel = $("inventory-panel");
   const box = $("inventory-box");
+
   if (panel) panel.classList.remove("hidden");
+
   if (box) {
     box.classList.remove("inventory-open");
     void box.offsetWidth;
     box.classList.add("inventory-open");
   }
+
+  saveGame();
 }
 
 function closeInventoryPanel() {
   $("inventory-panel")?.classList.add("hidden");
+  saveGame();
 }
 
 function renderInventoryPanel() {
   const list = $("inventory-list");
   if (!list) return;
+
   list.innerHTML = "";
   const inventory = player.inventory;
 
   Object.keys(inventory).forEach((key) => {
     const item = inventory[key];
+
     const wrapper = document.createElement("div");
     wrapper.className = "inventory-item";
+
     wrapper.innerHTML = `
       <strong>${item.name}</strong><br>
       Quantity: ${item.quantity}<br>
       Effect: ${item.effect} (${item.value})
     `;
+
     const useBtn = document.createElement("button");
     useBtn.textContent = "Use";
     useBtn.disabled = item.quantity <= 0;
     useBtn.onclick = () => useInventoryItem(key);
+
     wrapper.appendChild(useBtn);
     list.appendChild(wrapper);
   });
@@ -374,6 +661,7 @@ function useInventoryItem(itemKey) {
     writeLog(`You used ${item.name} and restored ${item.value} HP.`);
     safePlay("sfx-item");
   }
+
   if (item.effect === "tech") {
     player.tech = Math.min(player.maxTech, player.tech + item.value);
     writeLog(`You used ${item.name} and restored ${item.value} Tech.`);
@@ -382,9 +670,14 @@ function useInventoryItem(itemKey) {
 
   item.quantity--;
   updateHUD();
+  saveGame();
   closeInventoryPanel();
   enemyTurn();
 }
+
+// ==========================================
+// REWARDS / LOOT
+// ==========================================
 
 function giveBattleReward() {
   if (enemy.name === "Apex Guardian") {
@@ -405,13 +698,25 @@ function giveBattleReward() {
   }
 }
 
+// ==========================================
+// PLAYER ACTIONS
+// ==========================================
+
 function playerAttack() {
   safePlay("sfx-attack");
+
   const dmg = Math.max(1, player.atk - enemy.def);
   enemy.hp -= dmg;
+
   writeLog(`You attack for ${dmg} damage.`);
   updateHUD();
-  if (enemy.hp <= 0) return endCombat(true);
+
+  if (enemy.hp <= 0) {
+    endCombat(true);
+    return;
+  }
+
+  saveGame();
   enemyTurn();
 }
 
@@ -419,6 +724,7 @@ function playerDefend() {
   safePlay("sfx-defend");
   playerIsDefending = true;
   writeLog("You brace for impact.");
+  saveGame();
   enemyTurn();
 }
 
@@ -427,9 +733,12 @@ function playerSpecial() {
     writeLog("Not enough Tech!");
     return;
   }
+
   safePlay("sfx-special");
+
   const dmg = Math.max(1, player.atk * 2 - enemy.def);
   enemy.hp -= dmg;
+
   writeLog(`SPECIAL ATTACK for ${dmg}!`);
   player.tech = 0;
 
@@ -444,9 +753,19 @@ function playerSpecial() {
   }
 
   updateHUD();
-  if (enemy.hp <= 0) return endCombat(true);
+
+  if (enemy.hp <= 0) {
+    endCombat(true);
+    return;
+  }
+
+  saveGame();
   enemyTurn();
 }
+
+// ==========================================
+// ENEMY TURN
+// ==========================================
 
 function enemyTurn() {
   setTimeout(() => {
@@ -454,10 +773,12 @@ function enemyTurn() {
       writeLog(`${enemy.name} braces defensively.`);
       enemy.def += 2;
       setTimeout(() => { enemy.def -= 2; }, 300);
+      saveGame();
       return;
     }
 
     let dmg = Math.max(1, enemy.atk - player.def);
+
     if (playerIsDefending) {
       dmg = Math.floor(dmg / 2);
       playerIsDefending = false;
@@ -466,6 +787,7 @@ function enemyTurn() {
 
     player.hp -= dmg;
     safePlay("sfx-hit");
+
     writeLog(`${enemy.name} hits you for ${dmg}.`);
     updateHUD();
 
@@ -502,9 +824,18 @@ function enemyTurn() {
     player.tech = Math.min(player.maxTech, player.tech + TECH_GAIN);
     updateHUD();
 
-    if (player.hp <= 0) endCombat(false);
+    if (player.hp <= 0) {
+      endCombat(false);
+      return;
+    }
+
+    saveGame();
   }, 300);
 }
+
+// ==========================================
+// END COMBAT
+// ==========================================
 
 function endCombat(win) {
   closeInventoryPanel();
@@ -524,7 +855,8 @@ function endCombat(win) {
     overlay.classList.add("combat-overlay-show");
   }
 
-  if (win) safePlay("sfx-victory"); else safePlay("sfx-defeat");
+  if (win) safePlay("sfx-victory");
+  else safePlay("sfx-defeat");
 
   setTimeout(() => {
     resetCombatVisuals();
@@ -535,7 +867,9 @@ function endCombat(win) {
 
     const msg = $("outcome-message");
     if (msg) {
-      msg.textContent = win ? `You survived the encounter.${rewardText}` : "You were defeated in combat.";
+      msg.textContent = win
+        ? `You survived the encounter.${rewardText}`
+        : "You were defeated in combat.";
     }
 
     updateHUD();
@@ -544,11 +878,13 @@ function endCombat(win) {
       gameState.pendingEnemyType = gameState.currentEnemyType;
       startCombat();
     };
+
     $("menuBtn").onclick = () => goToScreen("main-menu");
 
     const cont = $("continueAfterBattle");
     const menuBtn = $("menuBtn");
     const retryBtn = $("retryBtn");
+
     menuBtn.classList.remove("hidden");
     retryBtn.classList.remove("hidden");
     cont.textContent = "Continue";
@@ -563,15 +899,29 @@ function endCombat(win) {
     } else {
       cont.classList.add("hidden");
     }
+
+    saveGame();
   }, 900);
 }
 
+// ==========================================
+// DOM READY
+// ==========================================
+
 document.addEventListener("DOMContentLoaded", () => {
   $("startBtn").onclick = () => {
+    clearSave();
+    resetRun();
     gameState.currentSceneId = 1;
     goToScreen("story-screen");
     renderScene();
   };
+
+  $("continueBtn").onclick = () => {
+    loadGame();
+  };
+
+  syncContinueButton();
 
   $("menuBtn").onclick = () => goToScreen("main-menu");
   $("howToPlayBtn").onclick = () => alert("Read the story and make choices.");
