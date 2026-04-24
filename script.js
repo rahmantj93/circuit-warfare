@@ -30,7 +30,7 @@ const scenes = [
   },
   { id: 3, text: "Quiet… too quiet. Motion spikes.", next: 5 },
   { id: 4, text: "Market strip flickers. A drone scans the rooftops.", next: 5 },
-  { id: 5, text: "'Target nearby. Prepare for contact.'", triggersCombat: true, next: 6 },
+  { id: 5, text: "'Target nearby. Prepare for contact.'", triggersCombat: true, enemyType: "drone", next: 6 },
   { id: 6, text: "The enemy collapses into a shower of sparks. Among the wreckage, you recover a glowing data shard.", next: 7 },
   {
     id: 7,
