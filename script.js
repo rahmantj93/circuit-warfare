@@ -339,13 +339,21 @@ function loadGame() {
   goToScreen("main-menu");
 }
 
+function hasSave() {
+  try {
+    return !!localStorage.getItem(SAVE_KEY);
+  } catch (_) {
+    return false;
+  }
+}
+
 function syncContinueButton() {
   const btn = $("continueBtn");
   if (!btn) return;
 
-  const hasSave = !!localStorage.getItem(SAVE_KEY);
-  btn.disabled = !hasSave;
-  btn.style.opacity = hasSave ? "1" : "0.5";
+  const exists = hasSave();
+  btn.disabled = !exists;
+  btn.style.opacity = exists ? "1" : "0.5";
 }
 
 // ==========================================
@@ -1039,6 +1047,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Start / continue game
   $("startBtn").onclick = () => {
+    // Warn before wiping an existing save
+    if (hasSave()) {
+      const proceed = window.confirm(
+        "Starting a new game will erase your current save. Continue?"
+      );
+      if (!proceed) return;
+    }
     clearSave();
     resetRun();
     gameState.currentSceneId = 1;
