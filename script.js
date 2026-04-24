@@ -4,7 +4,7 @@ const show = (id) => $(id)?.classList.remove("hidden");
 const hide = (id) => $(id)?.classList.add("hidden");
 
 function goToScreen(id) {
-  ["main-menu", "story-screen", "combat-screen", "inventory-panel", "outcome-screen"].forEach(hide);
+  ["main-menu", "story-screen", "combat-screen", "inventory-panel", "outcome-screen", "howto-panel"].forEach(hide);
   show(id);
 }
 
@@ -99,10 +99,10 @@ let player = {
 };
 
 const enemyTemplates = {
-  drone: { name: "Syntech Drone", maxHp: 40, hp: 40, atk: 10, def: 5 },
-  enforcer: { name: "Street Enforcer", maxHp: 55, hp: 55, atk: 9, def: 7 },
-  hacker: { name: "Neon Hacker", maxHp: 30, hp: 30, atk: 13, def: 4 },
-  boss: { name: "Apex Guardian", maxHp: 70, hp: 70, atk: 12, def: 6 }
+  drone:    { name: "Syntech Drone",   maxHp: 40, hp: 40, atk: 10, def: 5, portrait: "assets/enemy_drone.jpg" },
+  enforcer: { name: "Street Enforcer", maxHp: 55, hp: 55, atk: 9,  def: 7, portrait: "assets/enemy_enforcer.jpg" },
+  hacker:   { name: "Neon Hacker",     maxHp: 30, hp: 30, atk: 13, def: 4, portrait: "assets/enemy_hacker.jpg" },
+  boss:     { name: "Apex Guardian",   maxHp: 70, hp: 70, atk: 12, def: 6, portrait: "assets/enemy_boss.jpg" }
 };
 
 const randomEnemyTypes = ["drone", "enforcer", "hacker"];
@@ -471,6 +471,22 @@ function loadEnemy(type) {
   enemy.hp = chosen.hp;
   enemy.atk = chosen.atk;
   enemy.def = chosen.def;
+
+  // Swap enemy portrait + apply per-type accent class
+  const portraitEl = $("enemy-portrait");
+  if (portraitEl) {
+    portraitEl.classList.remove(
+      "enemy-type-drone", "enemy-type-enforcer", "enemy-type-hacker", "enemy-type-boss"
+    );
+    portraitEl.classList.add("enemy-type-" + type);
+
+    // Graceful fallback: if a type-specific portrait fails to load, fall back to enemy.jpg
+    portraitEl.onerror = () => {
+      portraitEl.onerror = null;
+      portraitEl.src = "assets/enemy.jpg";
+    };
+    portraitEl.src = chosen.portrait || "assets/enemy.jpg";
+  }
 }
 
 function pickRandomEnemy() {
@@ -905,26 +921,140 @@ function endCombat(win) {
 }
 
 // ==========================================
+// AUDIO: MUTE TOGGLE + BACKGROUND MUSIC
+// ==========================================
+
+const MUTE_KEY = "circuitWarfare_muted";
+let isMuted = localStorage.getItem(MUTE_KEY) === "1";
+
+function applyMuteState() {
+  const bgm = $("bgm");
+  const btn = $("muteBtn");
+
+  // Mute every <audio> tag on the page
+  document.querySelectorAll("audio").forEach((a) => { a.muted = isMuted; });
+
+  if (btn) btn.textContent = isMuted ? "🔇" : "🔊";
+  if (btn) btn.title = isMuted ? "Sound off — click or press M to unmute" : "Sound on — click or press M to mute";
+
+  // If unmuted and we have a bgm source, try to resume it (browsers need a user gesture)
+  if (bgm && !isMuted && bgm.paused) {
+    const p = bgm.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  }
+}
+
+function toggleMute() {
+  isMuted = !isMuted;
+  localStorage.setItem(MUTE_KEY, isMuted ? "1" : "0");
+  applyMuteState();
+}
+
+function startBgm() {
+  const bgm = $("bgm");
+  if (!bgm || isMuted) return;
+  try {
+    bgm.volume = 0.35;
+    const p = bgm.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  } catch (_) {}
+}
+
+// ==========================================
+// HOW TO PLAY MODAL
+// ==========================================
+
+function openHowTo() {
+  $("howto-panel")?.classList.remove("hidden");
+}
+function closeHowTo() {
+  $("howto-panel")?.classList.add("hidden");
+}
+
+// ==========================================
+// KEYBOARD SHORTCUTS
+// ==========================================
+// Combat: A=Attack, D=Defend, S=Special, I=Inventory
+// Global: M=mute, Esc=close modals
+function handleKeydown(e) {
+  // Ignore when typing in an input/textarea
+  if (e.target && ["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
+
+  const k = e.key.toLowerCase();
+
+  // Global: mute toggle
+  if (k === "m") {
+    toggleMute();
+    return;
+  }
+
+  // Global: Escape closes any open modal
+  if (k === "escape") {
+    if (!$("inventory-panel")?.classList.contains("hidden")) closeInventoryPanel();
+    if (!$("howto-panel")?.classList.contains("hidden")) closeHowTo();
+    return;
+  }
+
+  // Combat keys — only when combat screen is visible and no modal is blocking input
+  const combatVisible = !$("combat-screen")?.classList.contains("hidden");
+  const modalOpen =
+    !$("inventory-panel")?.classList.contains("hidden") ||
+    !$("howto-panel")?.classList.contains("hidden");
+
+  if (!combatVisible) return;
+
+  if (k === "i") {
+    // Toggle inventory from combat
+    if ($("inventory-panel")?.classList.contains("hidden")) openInventoryPanel();
+    else closeInventoryPanel();
+    return;
+  }
+
+  if (modalOpen) return; // other combat keys disabled while a modal is open
+
+  if (k === "a") playerAttack();
+  else if (k === "d") playerDefend();
+  else if (k === "s") playerSpecial();
+}
+
+// ==========================================
 // DOM READY
 // ==========================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Apply persisted mute state and set up button
+  applyMuteState();
+  $("muteBtn")?.addEventListener("click", toggleMute);
+
+  // How to play modal
+  $("howToPlayBtn").onclick = openHowTo;
+  $("closeHowtoBtn")?.addEventListener("click", closeHowTo);
+  // Click the backdrop to close
+  $("howto-panel")?.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "howto-panel") closeHowTo();
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener("keydown", handleKeydown);
+
+  // Start / continue game
   $("startBtn").onclick = () => {
     clearSave();
     resetRun();
     gameState.currentSceneId = 1;
     goToScreen("story-screen");
     renderScene();
+    startBgm();
   };
 
   $("continueBtn").onclick = () => {
     loadGame();
+    startBgm();
   };
 
   syncContinueButton();
 
   $("menuBtn").onclick = () => goToScreen("main-menu");
-  $("howToPlayBtn").onclick = () => alert("Read the story and make choices.");
 
   $("attackBtn").onclick = playerAttack;
   $("defendBtn").onclick = playerDefend;
