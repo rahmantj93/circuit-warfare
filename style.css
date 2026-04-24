@@ -83,8 +83,9 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
 #main-menu h1 {
   position: relative; z-index: 1; margin: 0 0 20px; font-size: clamp(2.4rem, 5vw, 4rem); letter-spacing: 2px; text-transform: uppercase; color: var(--accent);
 }
-#main-menu h1::after {
-  content: "Neon chapter protocol online"; display: block; margin-top: 10px; font-size: 0.9rem; letter-spacing: 1.2px; text-transform: uppercase;
+/* Subtitle under the glitch title (kept via a span in JS/HTML below the h1) */
+#main-menu .menu-subtitle {
+  display: block; margin: 10px 0 16px; font-size: 0.9rem; letter-spacing: 1.2px; text-transform: uppercase;
   color: rgba(223, 252, 255, 0.75); text-shadow: 0 0 8px rgba(0, 234, 255, 0.18);
 }
 #main-menu button { width: min(300px, 90%); }
@@ -256,6 +257,151 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
 /* disable risky global screen overlay to prevent black-screen race conditions */
 #screen-transition { display: none !important; }
 
+/* ============================================
+   MUTE BUTTON (fixed top-right)
+   ============================================ */
+.mute-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 50;
+  min-width: 0 !important;
+  width: 44px;
+  height: 44px;
+  padding: 0 !important;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  line-height: 44px;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+/* ============================================
+   HOW TO PLAY MODAL
+   ============================================ */
+#howto-panel {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.78);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 30;
+  padding: 20px;
+}
+#howto-panel.hidden { display: none; }
+#howto-box {
+  position: relative; overflow: hidden;
+  width: min(640px, 100%);
+  max-height: 86vh; overflow-y: auto;
+  background: linear-gradient(180deg, rgba(10,16,30,0.96), rgba(7,11,20,0.96));
+  border: 1px solid rgba(0,234,255,0.6); border-radius: 18px;
+  padding: 26px;
+  box-shadow: 0 0 0 1px rgba(0,234,255,0.08) inset, 0 14px 32px rgba(0,0,0,0.35), var(--shadow-neon);
+  animation: inventoryOpenAnim 0.22s ease;
+  text-align: left;
+}
+#howto-box::before {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(transparent 96%, rgba(0,234,255,0.06) 100%);
+  background-size: 100% 8px; pointer-events: none; opacity: 0.22;
+}
+#howto-box h3 {
+  margin: 0 0 14px; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 1px;
+  font-size: 1.4rem;
+}
+#howto-box h4 {
+  margin: 18px 0 6px; color: var(--accent-2);
+  text-transform: uppercase; letter-spacing: 1px;
+  font-size: 0.95rem;
+}
+#howto-content p { margin: 6px 0; line-height: 1.55; }
+#howto-content ul { margin: 6px 0 10px; padding-left: 20px; line-height: 1.7; }
+#howto-content code {
+  background: rgba(0,234,255,0.10);
+  border: 1px solid rgba(0,234,255,0.30);
+  padding: 1px 6px; border-radius: 4px;
+  font-size: 0.9em;
+}
+#howto-content kbd {
+  display: inline-block;
+  background: rgba(0,234,255,0.12);
+  border: 1px solid rgba(0,234,255,0.55);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  color: var(--accent);
+  box-shadow: 0 0 6px rgba(0,234,255,0.2);
+  margin-right: 2px;
+}
+#closeHowtoBtn { margin-top: 8px; }
+
+/* ============================================
+   GLITCH TITLE ANIMATION (main menu h1)
+   ============================================ */
+.glitch {
+  position: relative;
+  display: inline-block;
+  color: var(--accent);
+  text-shadow: 0 0 6px rgba(0,234,255,0.55), 0 0 18px rgba(0,234,255,0.18);
+  animation: glitchBaseFlicker 6s infinite;
+}
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.glitch::before {
+  color: var(--accent-2);
+  text-shadow: 2px 0 rgba(255,43,214,0.8);
+  clip-path: inset(0 0 60% 0);
+  animation: glitchShiftTop 3.4s infinite steps(2, end);
+}
+.glitch::after {
+  color: var(--accent);
+  text-shadow: -2px 0 rgba(0,234,255,0.8);
+  clip-path: inset(60% 0 0 0);
+  animation: glitchShiftBottom 2.8s infinite steps(2, end);
+}
+@keyframes glitchShiftTop {
+  0%,  88%, 100% { transform: translate(0, 0); opacity: 0.85; }
+  90%            { transform: translate(-3px, -1px); opacity: 1; }
+  92%            { transform: translate(2px, 1px);  opacity: 0.7; }
+  94%            { transform: translate(-1px, 1px); opacity: 1; }
+  96%            { transform: translate(1px, 0);    opacity: 0.85; }
+}
+@keyframes glitchShiftBottom {
+  0%,  84%, 100% { transform: translate(0, 0); opacity: 0.85; }
+  86%            { transform: translate(3px, 1px);  opacity: 1; }
+  88%            { transform: translate(-2px, -1px); opacity: 0.7; }
+  90%            { transform: translate(1px, 1px);  opacity: 1; }
+  92%            { transform: translate(-1px, 0);   opacity: 0.85; }
+}
+@keyframes glitchBaseFlicker {
+  0%, 92%, 100% { opacity: 1; filter: brightness(1); }
+  93%           { opacity: 0.8; filter: brightness(1.25); }
+  95%           { opacity: 1;   filter: brightness(0.9); }
+  97%           { opacity: 0.85; filter: brightness(1.15); }
+}
+
+/* ============================================
+   ENEMY PORTRAIT VARIANTS (border accent per type)
+   ============================================ */
+#enemy-portrait.enemy-type-drone    { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(0,234,255,0.2) inset, 0 0 10px rgba(0,234,255,0.45), 0 0 30px rgba(0,234,255,0.12); }
+#enemy-portrait.enemy-type-enforcer { border-color: #ff8a3c;      box-shadow: 0 0 0 1px rgba(255,138,60,0.2) inset, 0 0 10px rgba(255,138,60,0.45), 0 0 30px rgba(255,138,60,0.12); }
+#enemy-portrait.enemy-type-hacker   { border-color: var(--accent-2); box-shadow: 0 0 0 1px rgba(255,43,214,0.2) inset, 0 0 10px rgba(255,43,214,0.45), 0 0 30px rgba(255,43,214,0.12); }
+#enemy-portrait.enemy-type-boss     { border-color: #ff3b4f;       box-shadow: 0 0 0 1px rgba(255,59,79,0.2) inset, 0 0 12px rgba(255,59,79,0.55), 0 0 36px rgba(255,59,79,0.18); animation: bossPulse 1.6s ease-in-out infinite; }
+@keyframes bossPulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.18); }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 960px) {
   #combat-container { flex-direction: column; align-items: center; }
   #combat-left, #combat-log-container { width: 100%; }
@@ -269,4 +415,5 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
   .screen { padding: 24px 14px; }
   #player-portrait, #enemy-portrait { width: 110px; height: 110px; }
   button { min-width: 120px; padding: 10px 14px; }
+  .mute-btn { width: 40px; height: 40px; line-height: 40px; font-size: 1rem; }
 }

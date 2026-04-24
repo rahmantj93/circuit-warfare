@@ -8,9 +8,14 @@
   <script src="script.js" defer></script>
 </head>
 <body>
+  <!-- Global audio controls + BGM -->
+  <audio id="bgm" src="assets/bgm.mp3" preload="auto" loop></audio>
+  <button id="muteBtn" type="button" class="mute-btn" title="Toggle sound (M)">🔊</button>
+
   <!-- MAIN MENU -->
   <section id="main-menu" class="screen">
-    <h1>Circuit Warfare</h1>
+    <h1 class="glitch" data-text="Circuit Warfare">Circuit Warfare</h1>
+    <span class="menu-subtitle">Neon chapter protocol online</span>
     <button id="startBtn" type="button">Start Game</button>
     <button id="continueBtn" type="button">Continue</button>
     <button id="howToPlayBtn" type="button">How to Play</button>
@@ -49,19 +54,19 @@
         <div id="player-info"></div>
 
         <div id="combat-buttons">
-          <button id="attackBtn" type="button">Attack</button>
-          <button id="defendBtn" type="button">Defend</button>
-          <button id="specialBtn" type="button">Special</button>
-          <button id="itemBtn" type="button">Inventory</button>
+          <button id="attackBtn" type="button" title="Attack (A)">Attack</button>
+          <button id="defendBtn" type="button" title="Defend (D)">Defend</button>
+          <button id="specialBtn" type="button" title="Special (S)">Special</button>
+          <button id="itemBtn" type="button" title="Inventory (I)">Inventory</button>
         </div>
 
-        <audio id="sfx-attack" src="assets/attack.mp3" preload="auto"></audio>
-        <audio id="sfx-defend" src="assets/defend.mp3" preload="auto"></audio>
+        <audio id="sfx-attack"  src="assets/attack.mp3"  preload="auto"></audio>
+        <audio id="sfx-defend"  src="assets/defend.mp3"  preload="auto"></audio>
         <audio id="sfx-special" src="assets/special.mp3" preload="auto"></audio>
-        <audio id="sfx-item" src="assets/item.mp3" preload="auto"></audio>
-        <audio id="sfx-hit" src="assets/hit.mp3" preload="auto"></audio>
+        <audio id="sfx-item"    src="assets/item.mp3"    preload="auto"></audio>
+        <audio id="sfx-hit"     src="assets/hit.mp3"     preload="auto"></audio>
         <audio id="sfx-victory" src="assets/victory.mp3" preload="auto"></audio>
-        <audio id="sfx-defeat" src="assets/defeat.mp3" preload="auto"></audio>
+        <audio id="sfx-defeat"  src="assets/defeat.mp3"  preload="auto"></audio>
       </div>
 
       <div id="combat-log-container">
@@ -86,6 +91,44 @@
     <button id="continueAfterBattle" type="button">Continue</button>
     <button id="retryBtn" type="button">Retry</button>
     <button id="menuBtn" type="button">Main Menu</button>
+  </section>
+
+  <!-- HOW TO PLAY MODAL -->
+  <section id="howto-panel" class="hidden">
+    <div id="howto-box">
+      <h3>How to Play</h3>
+      <div id="howto-content">
+        <p><strong>Circuit Warfare</strong> is a cyberpunk RPG that blends narrative choice with turn-based combat.</p>
+
+        <h4>Story</h4>
+        <p>Read the text, then press <em>Continue</em> or a choice button to progress. Some choices branch the story and change your ending.</p>
+
+        <h4>Combat</h4>
+        <ul>
+          <li><strong>Attack</strong> — deal damage based on <code>ATK − enemy DEF</code>.</li>
+          <li><strong>Defend</strong> — halve incoming damage this turn.</li>
+          <li><strong>Special</strong> — spend a full Tech meter for a double-damage strike. Tech charges as you take hits.</li>
+          <li><strong>Inventory</strong> — use Health Packs to heal, Tech Cells to charge your Tech meter.</li>
+        </ul>
+
+        <h4>Keyboard Shortcuts (in combat)</h4>
+        <ul>
+          <li><kbd>A</kbd> — Attack</li>
+          <li><kbd>D</kbd> — Defend</li>
+          <li><kbd>S</kbd> — Special</li>
+          <li><kbd>I</kbd> — Open / close Inventory</li>
+          <li><kbd>Esc</kbd> — Close Inventory / How to Play</li>
+          <li><kbd>M</kbd> — Mute / unmute sound</li>
+        </ul>
+
+        <h4>Saving</h4>
+        <p>Your progress saves automatically after each action. Use <em>Continue</em> on the main menu to resume.</p>
+
+        <h4>Goal</h4>
+        <p>Defeat the Apex Guardian to complete the mission. Your choices and your remaining inventory at the end determine which of three endings you unlock.</p>
+      </div>
+      <button id="closeHowtoBtn" type="button">Close</button>
+    </div>
   </section>
 </body>
 </html>
