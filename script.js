@@ -4,6 +4,13 @@ const show = (id) => $(id)?.classList.remove("hidden");
 const hide = (id) => $(id)?.classList.add("hidden");
 
 function goToScreen(id) {
+  // Cancel any in-progress typewriter animation when navigating away
+  if (typeof currentTyper !== "undefined" && currentTyper) {
+    clearInterval(currentTyper.intervalId);
+    currentTyper = null;
+    const el = $("story-text");
+    if (el) el.classList.remove("typing");
+  }
   ["main-menu", "story-screen", "combat-screen", "inventory-panel", "outcome-screen", "howto-panel"].forEach(hide);
   show(id);
 }
@@ -200,6 +207,7 @@ function restoreCombatLog(messages = []) {
 }
 
 function getOutcomeSnapshot() {
+  const screen = $("outcome-screen");
   return {
     title: $("outcome-title")?.textContent || "",
     message: $("outcome-message")?.textContent || "",
@@ -207,9 +215,13 @@ function getOutcomeSnapshot() {
     continueText: $("continueAfterBattle")?.textContent || "Continue",
     retryHidden: $("retryBtn")?.classList.contains("hidden") ?? false,
     menuHidden: $("menuBtn")?.classList.contains("hidden") ?? false,
+    outcomeType:
+      ["outcome-victory", "outcome-defeat", "outcome-ending"].find((cls) =>
+        screen?.classList.contains(cls)
+      ) || null,
     endingClass:
       ["ending-relay", "ending-side", "ending-best"].find((cls) =>
-        $("outcome-screen")?.classList.contains(cls)
+        screen?.classList.contains(cls)
       ) || null
   };
 }
@@ -243,12 +255,16 @@ function restoreOutcomeFromSave(outcome) {
     const retryBtn = $("retryBtn");
     const menuBtn = $("menuBtn");
 
-    screen.classList.remove("ending-relay", "ending-side", "ending-best");
-    if (outcome.endingClass) {
-      screen.classList.add(outcome.endingClass);
-    }
+    // Clear all outcome-related classes, then apply the saved ones
+    screen.classList.remove(
+      "outcome-victory", "outcome-defeat", "outcome-ending",
+      "ending-relay", "ending-side", "ending-best"
+    );
+    if (outcome.outcomeType) screen.classList.add(outcome.outcomeType);
+    if (outcome.endingClass) screen.classList.add(outcome.endingClass);
 
     title.textContent = outcome.title || "";
+    title.setAttribute("data-text", outcome.title || "");
     msg.textContent = outcome.message || "";
 
     cont.textContent = outcome.continueText || "Continue";
@@ -370,20 +386,27 @@ function showEndingCard(scene) {
   const menuBtn = $("menuBtn");
   const screen = $("outcome-screen");
 
-  screen.classList.remove("ending-relay", "ending-side", "ending-best");
+  // Clear all possible prior outcome classes (combat + ending variants)
+  screen.classList.remove("outcome-victory", "outcome-defeat", "outcome-ending",
+    "ending-relay", "ending-side", "ending-best");
+  screen.classList.add("outcome-ending");
 
+  let titleText = "";
   if (scene.id === 21) {
-    title.textContent = "Relay Ending";
+    titleText = "Relay Ending";
     screen.classList.add("ending-relay");
   }
   if (scene.id === 22) {
-    title.textContent = "Side Street Ending";
+    titleText = "Side Street Ending";
     screen.classList.add("ending-side");
   }
   if (scene.id === 23) {
-    title.textContent = "Overclocked Truth";
+    titleText = "Overclocked Truth";
     screen.classList.add("ending-best");
   }
+
+  title.textContent = titleText;
+  title.setAttribute("data-text", titleText);
 
   msg.textContent = scene.text;
 
@@ -419,8 +442,6 @@ function renderScene() {
     return;
   }
 
-  $("story-text").textContent = s.text;
-
   const storyPanel = $("story-panel");
   if (storyPanel) {
     storyPanel.classList.remove("story-refresh");
@@ -428,40 +449,47 @@ function renderScene() {
     storyPanel.classList.add("story-refresh");
   }
 
-  $("choice-buttons").innerHTML = "";
+  const choicesContainer = $("choice-buttons");
   const cbtn = $("continueStoryBtn");
 
-  if (s.choices) {
-    cbtn.classList.add("hidden");
+  // Clear any previous buttons and hide them until the text finishes typing.
+  choicesContainer.innerHTML = "";
+  cbtn.classList.add("hidden");
 
-    s.choices.forEach((choice) => {
-      const b = document.createElement("button");
-      b.textContent = choice.text;
-      b.onclick = () => {
-        if (s.id === 7) {
-          if (choice.next === 8) gameState.storyFlags.routeChoice = "relay";
-          if (choice.next === 9) gameState.storyFlags.routeChoice = "sideStreet";
-        }
+  // Build the scene's buttons but hold them hidden until the typewriter finishes
+  const revealButtons = () => {
+    if (s.choices) {
+      s.choices.forEach((choice) => {
+        const b = document.createElement("button");
+        b.textContent = choice.text;
+        b.onclick = () => {
+          if (s.id === 7) {
+            if (choice.next === 8) gameState.storyFlags.routeChoice = "relay";
+            if (choice.next === 9) gameState.storyFlags.routeChoice = "sideStreet";
+          }
 
-        gameState.currentSceneId = choice.next;
+          gameState.currentSceneId = choice.next;
+          renderScene();
+        };
+        choicesContainer.appendChild(b);
+      });
+
+    } else if (s.next) {
+      cbtn.classList.remove("hidden");
+      cbtn.onclick = () => {
+        gameState.currentSceneId = s.next;
         renderScene();
       };
-      $("choice-buttons").appendChild(b);
-    });
 
-  } else if (s.next) {
-    cbtn.classList.remove("hidden");
-    cbtn.onclick = () => {
-      gameState.currentSceneId = s.next;
-      renderScene();
-    };
+    } else {
+      choicesContainer.innerHTML = "<p>— End of demo —</p>";
+    }
 
-  } else {
-    cbtn.classList.add("hidden");
-    $("choice-buttons").innerHTML = "<p>— End of demo —</p>";
-  }
+    saveGame();
+  };
 
-  saveGame();
+  // Start typing the text; reveal buttons when done
+  typewriterText(s.text, revealButtons);
 }
 
 // ==========================================
@@ -886,8 +914,20 @@ function endCombat(win) {
     resetCombatVisuals();
     goToScreen("outcome-screen");
 
+    const screen = $("outcome-screen");
+    if (screen) {
+      // Clear any previous outcome class (from a prior run)
+      screen.classList.remove("outcome-victory", "outcome-defeat", "outcome-ending",
+        "ending-relay", "ending-side", "ending-best");
+      screen.classList.add(win ? "outcome-victory" : "outcome-defeat");
+    }
+
     const title = $("outcome-title");
-    if (title) title.textContent = win ? "VICTORY!" : "GAME OVER";
+    if (title) {
+      const text = win ? "VICTORY!" : "GAME OVER";
+      title.textContent = text;
+      title.setAttribute("data-text", text);
+    }
 
     const msg = $("outcome-message");
     if (msg) {
@@ -1026,6 +1066,63 @@ function handleKeydown(e) {
 }
 
 // ==========================================
+// TYPEWRITER EFFECT (story text)
+// ==========================================
+// Types out story text one character at a time with a class-based fading cursor.
+// Call cancelTyper() or click story-text to snap to full text.
+// Guards against overlapping timers by cancelling the previous one.
+
+let currentTyper = null;
+
+function cancelTyper() {
+  if (currentTyper) {
+    clearInterval(currentTyper.intervalId);
+    // Snap the text to full immediately
+    const el = $("story-text");
+    if (el) {
+      el.textContent = currentTyper.fullText;
+      el.classList.remove("typing");
+    }
+    // Reveal whatever was waiting (Continue btn / choice buttons)
+    if (currentTyper.onDone) currentTyper.onDone();
+    currentTyper = null;
+  }
+}
+
+function typewriterText(fullText, onDone) {
+  const el = $("story-text");
+  if (!el) {
+    if (onDone) onDone();
+    return;
+  }
+
+  // Cancel any previous animation first
+  if (currentTyper) {
+    clearInterval(currentTyper.intervalId);
+    currentTyper = null;
+  }
+
+  el.textContent = "";
+  el.classList.add("typing");
+
+  let i = 0;
+  const speed = 22; // ms per character
+
+  const intervalId = setInterval(() => {
+    i++;
+    el.textContent = fullText.slice(0, i);
+    if (i >= fullText.length) {
+      clearInterval(intervalId);
+      el.classList.remove("typing");
+      currentTyper = null;
+      if (onDone) onDone();
+    }
+  }, speed);
+
+  currentTyper = { intervalId, fullText, onDone };
+}
+
+// ==========================================
 // DOM READY
 // ==========================================
 
@@ -1044,6 +1141,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Keyboard shortcuts
   document.addEventListener("keydown", handleKeydown);
+
+  // Click on the story panel (or on the story text itself) to skip the typewriter
+  const storyPanelEl = $("story-panel");
+  if (storyPanelEl) {
+    storyPanelEl.addEventListener("click", () => {
+      if (currentTyper) cancelTyper();
+    });
+  }
 
   // Start / continue game
   $("startBtn").onclick = () => {

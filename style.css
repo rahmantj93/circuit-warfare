@@ -400,6 +400,78 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
 }
 
 /* ============================================
+   TYPEWRITER CURSOR (appears during typing)
+   ============================================ */
+#story-text.typing::after {
+  content: "▌";
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--accent);
+  animation: cursorBlink 0.8s step-end infinite;
+  font-weight: 100;
+  text-shadow: 0 0 8px rgba(0,234,255,0.7);
+}
+@keyframes cursorBlink {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Subtle "click to skip" hint on the story panel while typing */
+#story-panel:has(#story-text.typing) {
+  cursor: pointer;
+}
+
+/* ============================================
+   OUTCOME BANNER (victory / defeat / ending)
+   ============================================ */
+.outcome-banner {
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  margin: 20px 0 14px;
+  padding: 4px 0;
+}
+
+/* Victory — green glitch */
+#outcome-screen.outcome-victory .outcome-banner {
+  color: var(--good);
+  text-shadow: 0 0 8px rgba(76,255,154,0.6), 0 0 22px rgba(76,255,154,0.25);
+}
+#outcome-screen.outcome-victory .outcome-banner::before { color: rgba(255,255,255,0.85); text-shadow: 2px 0 rgba(76,255,154,0.8); }
+#outcome-screen.outcome-victory .outcome-banner::after  { color: var(--good); text-shadow: -2px 0 rgba(76,255,154,0.8); }
+
+/* Defeat — red glitch, heavier distortion */
+#outcome-screen.outcome-defeat .outcome-banner {
+  color: #ff3b4f;
+  text-shadow: 0 0 8px rgba(255,59,79,0.7), 0 0 22px rgba(255,59,79,0.3);
+  animation: glitchBaseFlicker 2.5s infinite;
+}
+#outcome-screen.outcome-defeat .outcome-banner::before { color: #ff8a3c; text-shadow: 3px 0 rgba(255,59,79,0.85); }
+#outcome-screen.outcome-defeat .outcome-banner::after  { color: #ff3b4f; text-shadow: -3px 0 rgba(255,59,79,0.85); }
+
+/* Ending screens — cyan (default glitch is already cyan, but reinforce) */
+#outcome-screen.outcome-ending .outcome-banner {
+  color: var(--accent);
+  text-shadow: 0 0 8px rgba(0,234,255,0.6), 0 0 22px rgba(0,234,255,0.25);
+}
+
+/* Outcome message styling */
+#outcome-screen #outcome-message {
+  max-width: 620px;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: rgba(223,252,255,0.85);
+  margin: 6px 0 24px;
+  padding: 0 20px;
+}
+
+/* Show/hide Retry and Continue based on outcome.
+   Retry only makes sense on defeat; Continue only on victory or endings. */
+#outcome-screen.outcome-victory #retryBtn,
+#outcome-screen.outcome-ending #retryBtn { display: none; }
+#outcome-screen.outcome-defeat #continueAfterBattle { display: none; }
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 @media (max-width: 960px) {
