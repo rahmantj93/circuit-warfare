@@ -109,7 +109,7 @@ The game's tone, setting, and visual language draw on *Cyberpunk 2077* (CD Proje
 © 2026 Tanzeem Rahman. All rights reserved.
 
 This repository is submitted as academic coursework for SET08101 Web Technologies
-at Edinburgh Napier University (Trimester 2, 2025–26). The source code is published
+at Edinburgh Napier University. The source code is published
 for the purposes of assessment and demonstration only.
 
 No part of this code may be copied, redistributed, or submitted for credit by any
