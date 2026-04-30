@@ -254,12 +254,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
 #outcome-screen.ending-side #outcome-message::before { background: linear-gradient(90deg, transparent, rgba(255,43,214,0.95), transparent); }
 #outcome-screen.ending-best #outcome-message::before { background: linear-gradient(90deg, transparent, rgba(76,255,154,0.95), transparent); }
 
-/* disable risky global screen overlay to prevent black-screen race conditions */
 #screen-transition { display: none !important; }
 
-/* ============================================
-   MUTE BUTTON (fixed top-right)
-   ============================================ */
 .mute-btn {
   position: fixed;
   top: 14px;
@@ -276,9 +272,6 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
   text-transform: none !important;
 }
 
-/* ============================================
-   HOW TO PLAY MODAL
-   ============================================ */
 #howto-panel {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.78);
@@ -336,9 +329,6 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
 }
 #closeHowtoBtn { margin-top: 8px; }
 
-/* ============================================
-   GLITCH TITLE ANIMATION (main menu h1)
-   ============================================ */
 .glitch {
   position: relative;
   display: inline-block;
@@ -387,9 +377,6 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
   97%           { opacity: 0.85; filter: brightness(1.15); }
 }
 
-/* ============================================
-   ENEMY PORTRAIT VARIANTS (border accent per type)
-   ============================================ */
 #enemy-portrait.enemy-type-drone    { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(0,234,255,0.2) inset, 0 0 10px rgba(0,234,255,0.45), 0 0 30px rgba(0,234,255,0.12); }
 #enemy-portrait.enemy-type-enforcer { border-color: #ff8a3c;      box-shadow: 0 0 0 1px rgba(255,138,60,0.2) inset, 0 0 10px rgba(255,138,60,0.45), 0 0 30px rgba(255,138,60,0.12); }
 #enemy-portrait.enemy-type-hacker   { border-color: var(--accent-2); box-shadow: 0 0 0 1px rgba(255,43,214,0.2) inset, 0 0 10px rgba(255,43,214,0.45), 0 0 30px rgba(255,43,214,0.12); }
@@ -399,9 +386,6 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
   50%      { filter: brightness(1.18); }
 }
 
-/* ============================================
-   TYPEWRITER CURSOR (appears during typing)
-   ============================================ */
 #story-text.typing::after {
   content: "▌";
   display: inline-block;
@@ -416,14 +400,10 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
   51%, 100% { opacity: 0; }
 }
 
-/* Subtle "click to skip" hint on the story panel while typing */
 #story-panel:has(#story-text.typing) {
   cursor: pointer;
 }
 
-/* ============================================
-   OUTCOME BANNER (victory / defeat / ending)
-   ============================================ */
 .outcome-banner {
   font-size: clamp(2.4rem, 6vw, 3.6rem);
   letter-spacing: 6px;
@@ -432,7 +412,6 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
   padding: 4px 0;
 }
 
-/* Victory — green glitch */
 #outcome-screen.outcome-victory .outcome-banner {
   color: var(--good);
   text-shadow: 0 0 8px rgba(76,255,154,0.6), 0 0 22px rgba(76,255,154,0.25);
@@ -440,7 +419,6 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
 #outcome-screen.outcome-victory .outcome-banner::before { color: rgba(255,255,255,0.85); text-shadow: 2px 0 rgba(76,255,154,0.8); }
 #outcome-screen.outcome-victory .outcome-banner::after  { color: var(--good); text-shadow: -2px 0 rgba(76,255,154,0.8); }
 
-/* Defeat — red glitch, heavier distortion */
 #outcome-screen.outcome-defeat .outcome-banner {
   color: #ff3b4f;
   text-shadow: 0 0 8px rgba(255,59,79,0.7), 0 0 22px rgba(255,59,79,0.3);
@@ -449,13 +427,11 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
 #outcome-screen.outcome-defeat .outcome-banner::before { color: #ff8a3c; text-shadow: 3px 0 rgba(255,59,79,0.85); }
 #outcome-screen.outcome-defeat .outcome-banner::after  { color: #ff3b4f; text-shadow: -3px 0 rgba(255,59,79,0.85); }
 
-/* Ending screens — cyan (default glitch is already cyan, but reinforce) */
 #outcome-screen.outcome-ending .outcome-banner {
   color: var(--accent);
   text-shadow: 0 0 8px rgba(0,234,255,0.6), 0 0 22px rgba(0,234,255,0.25);
 }
 
-/* Outcome message styling */
 #outcome-screen #outcome-message {
   max-width: 620px;
   font-size: 1.05rem;
@@ -465,15 +441,10 @@ button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); bo
   padding: 0 20px;
 }
 
-/* Show/hide Retry and Continue based on outcome.
-   Retry only makes sense on defeat; Continue only on victory or endings. */
 #outcome-screen.outcome-victory #retryBtn,
 #outcome-screen.outcome-ending #retryBtn { display: none; }
 #outcome-screen.outcome-defeat #continueAfterBattle { display: none; }
 
-/* ============================================
-   RESPONSIVE
-   ============================================ */
 @media (max-width: 960px) {
   #combat-container { flex-direction: column; align-items: center; }
   #combat-left, #combat-log-container { width: 100%; }
