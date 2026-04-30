@@ -87,9 +87,7 @@ function determineEndingScene() {
   return 21;
 }
 
-// ==========================================
 // COMBAT SYSTEM DATA
-// ==========================================
 
 let player = {
   name: "Operative",
@@ -125,9 +123,7 @@ let enemy = {
 const TECH_GAIN = 10;
 let playerIsDefending = false;
 
-// ==========================================
 // LOCAL STORAGE SAVE / LOAD
-// ==========================================
 
 const SAVE_KEY = "circuitWarfareSave_v3";
 let suppressAutoSave = false;
@@ -372,9 +368,7 @@ function syncContinueButton() {
   btn.style.opacity = exists ? "1" : "0.5";
 }
 
-// ==========================================
 // STORY / ENDINGS
-// ==========================================
 
 function showEndingCard(scene) {
   goToScreen("outcome-screen");
@@ -492,9 +486,7 @@ function renderScene() {
   typewriterText(s.text, revealButtons);
 }
 
-// ==========================================
 // COMBAT SYSTEM
-// ==========================================
 
 function loadEnemy(type) {
   const chosen = enemyTemplates[type];
@@ -508,7 +500,6 @@ function loadEnemy(type) {
   enemy.atk = chosen.atk;
   enemy.def = chosen.def;
 
-  // Swap enemy portrait + apply per-type accent class
   const portraitEl = $("enemy-portrait");
   if (portraitEl) {
     portraitEl.classList.remove(
@@ -516,7 +507,6 @@ function loadEnemy(type) {
     );
     portraitEl.classList.add("enemy-type-" + type);
 
-    // Graceful fallback: if a type-specific portrait fails to load, fall back to enemy.jpg
     portraitEl.onerror = () => {
       portraitEl.onerror = null;
       portraitEl.src = "assets/enemy.jpg";
@@ -645,10 +635,7 @@ function writeLog(msg) {
   box.appendChild(p);
   box.scrollTop = box.scrollHeight;
 }
-
-// ==========================================
 // INVENTORY SYSTEM
-// ==========================================
 
 function openInventoryPanel() {
   renderInventoryPanel();
@@ -727,9 +714,7 @@ function useInventoryItem(itemKey) {
   enemyTurn();
 }
 
-// ==========================================
 // REWARDS / LOOT
-// ==========================================
 
 function giveBattleReward() {
   if (enemy.name === "Apex Guardian") {
@@ -750,9 +735,7 @@ function giveBattleReward() {
   }
 }
 
-// ==========================================
 // PLAYER ACTIONS
-// ==========================================
 
 function playerAttack() {
   safePlay("sfx-attack");
@@ -815,9 +798,7 @@ function playerSpecial() {
   enemyTurn();
 }
 
-// ==========================================
 // ENEMY TURN
-// ==========================================
 
 function enemyTurn() {
   setTimeout(() => {
@@ -885,9 +866,7 @@ function enemyTurn() {
   }, 300);
 }
 
-// ==========================================
 // END COMBAT
-// ==========================================
 
 function endCombat(win) {
   closeInventoryPanel();
@@ -916,7 +895,7 @@ function endCombat(win) {
 
     const screen = $("outcome-screen");
     if (screen) {
-      // Clear any previous outcome class (from a prior run)
+      // Clear any previous outcome class
       screen.classList.remove("outcome-victory", "outcome-defeat", "outcome-ending",
         "ending-relay", "ending-side", "ending-best");
       screen.classList.add(win ? "outcome-victory" : "outcome-defeat");
@@ -968,9 +947,7 @@ function endCombat(win) {
   }, 900);
 }
 
-// ==========================================
-// AUDIO: MUTE TOGGLE + BACKGROUND MUSIC
-// ==========================================
+// AUDIO: MUTE TOGGLE + BGM
 
 const MUTE_KEY = "circuitWarfare_muted";
 let isMuted = localStorage.getItem(MUTE_KEY) === "1";
@@ -979,13 +956,11 @@ function applyMuteState() {
   const bgm = $("bgm");
   const btn = $("muteBtn");
 
-  // Mute every <audio> tag on the page
   document.querySelectorAll("audio").forEach((a) => { a.muted = isMuted; });
 
   if (btn) btn.textContent = isMuted ? "🔇" : "🔊";
   if (btn) btn.title = isMuted ? "Sound off — click or press M to unmute" : "Sound on — click or press M to mute";
 
-  // If unmuted and we have a bgm source, try to resume it (browsers need a user gesture)
   if (bgm && !isMuted && bgm.paused) {
     const p = bgm.play();
     if (p && typeof p.catch === "function") p.catch(() => {});
@@ -1025,25 +1000,24 @@ function closeHowTo() {
 // Combat: A=Attack, D=Defend, S=Special, I=Inventory
 // Global: M=mute, Esc=close modals
 function handleKeydown(e) {
-  // Ignore when typing in an input/textarea
   if (e.target && ["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
 
   const k = e.key.toLowerCase();
 
-  // Global: mute toggle
+  // mute toggle
   if (k === "m") {
     toggleMute();
     return;
   }
 
-  // Global: Escape closes any open modal
+  // Esc closes any open modal
   if (k === "escape") {
     if (!$("inventory-panel")?.classList.contains("hidden")) closeInventoryPanel();
     if (!$("howto-panel")?.classList.contains("hidden")) closeHowTo();
     return;
   }
 
-  // Combat keys — only when combat screen is visible and no modal is blocking input
+  // Combat keys
   const combatVisible = !$("combat-screen")?.classList.contains("hidden");
   const modalOpen =
     !$("inventory-panel")?.classList.contains("hidden") ||
@@ -1065,12 +1039,6 @@ function handleKeydown(e) {
   else if (k === "s") playerSpecial();
 }
 
-// ==========================================
-// TYPEWRITER EFFECT (story text)
-// ==========================================
-// Types out story text one character at a time with a class-based fading cursor.
-// Call cancelTyper() or click story-text to snap to full text.
-// Guards against overlapping timers by cancelling the previous one.
 
 let currentTyper = null;
 
@@ -1122,9 +1090,8 @@ function typewriterText(fullText, onDone) {
   currentTyper = { intervalId, fullText, onDone };
 }
 
-// ==========================================
 // DOM READY
-// ==========================================
+
 
 document.addEventListener("DOMContentLoaded", () => {
   // Apply persisted mute state and set up button
